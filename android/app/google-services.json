@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "742216978719",
+    "project_id": "pathpal-d5503",
+    "storage_bucket": "pathpal-d5503.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:742216978719:android:18a92a5dd792d5a8d7202a",
+        "android_client_info": {
+          "package_name": "com.example.pathpal"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDZDJt1cijrlstAJ1Dt6YHm2V8A6Vqa0M8"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
