@@ -50,22 +50,22 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             fontSize: 18, fontWeight: FontWeight.bold),
                       ),
                       const SizedBox(height: 10),
-                      const BuildSettingItem(
+                      BuildSettingItem(
                         Icons.edit,
                         'PERSONAL INFORMATION',
                         nextScreen: PersonalInfoScreen(),
                       ),
-                      const BuildSettingItem(
+                      BuildSettingItem(
                         Icons.calendar_today,
                         'TRIP CALENDAR',
                         nextScreen: PersonalInfoScreen(),
                       ),
-                      const BuildSettingItem(
+                      BuildSettingItem(
                         Icons.settings,
                         'SETTINGS',
                         nextScreen: PersonalInfoScreen(),
                       ),
-                      const BuildSettingItem(
+                      BuildSettingItem(
                         Icons.notifications,
                         'NOTIFICATIONS',
                         nextScreen: PersonalInfoScreen(),
@@ -77,17 +77,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             fontSize: 18, fontWeight: FontWeight.bold),
                       ),
                       const SizedBox(height: 10),
-                      const BuildSettingItem(
+                      BuildSettingItem(
                         Icons.security,
                         'PRIVACY POLICY',
                         nextScreen: PersonalInfoScreen(),
                       ),
-                      const BuildSettingItem(
+                      BuildSettingItem(
                         Icons.description,
                         'TERMS AND CONDITIONS',
                         nextScreen: PersonalInfoScreen(),
                       ),
-                      const BuildSettingItem(
+                      BuildSettingItem(
                         Icons.help,
                         'HELP',
                         nextScreen: PersonalInfoScreen(),

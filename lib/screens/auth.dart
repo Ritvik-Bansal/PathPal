@@ -1,5 +1,3 @@
-import 'dart:io';
-
 import 'package:flutter/material.dart';
 
 import 'package:flutter/services.dart' show rootBundle;
@@ -8,6 +6,10 @@ import 'package:path_provider/path_provider.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_storage/firebase_storage.dart';
+
+import 'package:country_picker/country_picker.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
 
 final _firebase = FirebaseAuth.instance;
 
@@ -21,11 +23,33 @@ class AuthScreen extends StatefulWidget {
 class _AuthScreenState extends State<AuthScreen> {
   final _form = GlobalKey<FormState>();
 
+  Country? country;
+
+  Future<String> fetchCountryCode() async {
+    final response = await http.get(Uri.parse('http://ip-api.com/json'));
+    final body = json.decode(response.body);
+    final countryCode = body['countryCode'];
+    return countryCode;
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    fetchCountryCode().then((countryCode) {
+      setState(() {
+        country = CountryParser.parseCountryCode(countryCode);
+      });
+    });
+  }
+
   var _isLogin = true;
   var _enteredEmail = "";
   var _enteredPassword = "";
   var _enteredName = "";
+  var _enteredPhone = "";
+  var _enteredAge = "";
   var _isAuthenticating = false;
+  var _passwordVisible = false;
   // File? _selectedImage;
 
   // @override
@@ -107,6 +131,8 @@ class _AuthScreenState extends State<AuthScreen> {
             .set({
           'name': _enteredName,
           'email': _enteredEmail,
+          'age': _enteredAge,
+          'phone_number': _enteredPhone
           // 'image_url': imageUrl,
         });
       }
@@ -124,6 +150,28 @@ class _AuthScreenState extends State<AuthScreen> {
         _isAuthenticating = false;
       });
     }
+  }
+
+  void showPicker() {
+    showCountryPicker(
+      context: context,
+      favorite: ['IN', 'US', 'CA'],
+      exclude: ['CN'],
+      countryListTheme: CountryListThemeData(
+        bottomSheetHeight: 600,
+        borderRadius: BorderRadius.circular(20),
+        inputDecoration: const InputDecoration(
+          prefixIcon: Icon(Icons.search),
+          hintText: 'Search your country here..',
+          border: InputBorder.none,
+        ),
+      ),
+      onSelect: (country) {
+        setState(() {
+          this.country = country;
+        });
+      },
+    );
   }
 
   @override
@@ -193,11 +241,90 @@ class _AuthScreenState extends State<AuthScreen> {
                             _enteredName = value!;
                           },
                         ),
-                      TextFormField(
-                        decoration: const InputDecoration(
-                          label: Text('Password'),
+                      if (!_isLogin)
+                        country == null
+                            ? const CircularProgressIndicator()
+                            : TextFormField(
+                                onFieldSubmitted: (phoneNumber) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: Text(
+                                          '+${country!.phoneCode}$phoneNumber'),
+                                    ),
+                                  );
+                                },
+                                keyboardType: TextInputType.number,
+                                decoration: InputDecoration(
+                                  contentPadding: EdgeInsets.only(top: 15),
+                                  hintText: 'Enter phone number',
+                                  prefixIcon: GestureDetector(
+                                    behavior: HitTestBehavior.opaque,
+                                    onTap: showPicker,
+                                    child: Container(
+                                      height: 56,
+                                      width: 100,
+                                      alignment: Alignment.center,
+                                      child: Text(
+                                        '${country!.flagEmoji} +${country!.phoneCode}',
+                                        style: const TextStyle(
+                                          fontSize: 18,
+                                          color: Colors.black,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                                validator: (value) {
+                                  if (value!.isEmpty) {
+                                    return 'Please enter a phone number';
+                                  } else if (!RegExp(
+                                          r'^\s*(?:\+?(\d{1,3}))?[-. (]*(\d{3})[-. )]*(\d{3})[-. ]*(\d{4})(?: *x(\d+))?\s*$')
+                                      .hasMatch(value)) {
+                                    return 'Please enter a valid phone number';
+                                  }
+                                  return null;
+                                },
+                                onSaved: (value) {
+                                  _enteredPhone =
+                                      "+${country!.phoneCode} ${value!}";
+                                },
+                              ),
+                      if (!_isLogin)
+                        TextFormField(
+                          decoration: const InputDecoration(
+                            label: Text('Age'),
+                          ),
+                          keyboardType: TextInputType.number,
+                          validator: (value) {
+                            if (value!.isEmpty || num.tryParse(value) == null) {
+                              return 'Please enter an age';
+                            } else if (num.parse(value!) > 120) {
+                              return 'Please enter a valid age';
+                            }
+                            return null;
+                          },
+                          onSaved: (value) {
+                            _enteredAge = value!;
+                          },
                         ),
-                        obscureText: true,
+                      TextFormField(
+                        decoration: InputDecoration(
+                          label: Text('Password'),
+                          suffixIcon: IconButton(
+                            onPressed: () {
+                              setState(() {
+                                _passwordVisible = !_passwordVisible;
+                              });
+                            },
+                            icon: Icon(
+                              _passwordVisible
+                                  ? Icons.visibility_off
+                                  : Icons.visibility,
+                            ),
+                          ),
+                        ),
+                        obscureText: !_passwordVisible,
                         validator: (value) {
                           if (value == null || value.trim().length < 6) {
                             return "Password must be at least 6 characters long";

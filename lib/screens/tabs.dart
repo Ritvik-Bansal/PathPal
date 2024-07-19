@@ -49,6 +49,8 @@ class _TabsState extends State<Tabs> {
 
   @override
   Widget build(BuildContext context) {
+    _fetchUserName();
+
     return Scaffold(
       appBar: _selectedIndex == 1
           ? AppBar(
