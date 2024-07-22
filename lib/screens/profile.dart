@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:pathpal/screens/contact_us.dart';
 import 'package:pathpal/screens/personal_info.dart';
 import 'package:pathpal/widgets/buildSettingItem.dart';
 
@@ -90,7 +91,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       BuildSettingItem(
                         Icons.help,
                         'HELP',
-                        nextScreen: PersonalInfoScreen(),
+                        nextScreen: ContactUsScreen(),
                       ),
                       const SizedBox(height: 20),
                       Center(

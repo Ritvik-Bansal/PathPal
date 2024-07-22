@@ -106,6 +106,52 @@ class _PersonalInfoScreenState extends State<PersonalInfoScreen> {
     }
   }
 
+  Future<void> _resetPassword(String email) async {
+    try {
+      await _firebase.sendPasswordResetEmail(email: email);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Password reset email sent to $email'),
+        ),
+      );
+    } catch (error) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content:
+              Text('Failed to send password reset email: ${error.toString()}'),
+        ),
+      );
+    }
+  }
+
+  void _showResetPasswordConfirmation(String email) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text('Reset Password'),
+          content: Text(
+              'Are you sure you want to reset your password? An email will be sent to $email.'),
+          actions: <Widget>[
+            TextButton(
+              child: Text('Cancel'),
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+            ),
+            TextButton(
+              child: Text('Confirm'),
+              onPressed: () {
+                Navigator.of(context).pop();
+                _resetPassword(email);
+              },
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -189,7 +235,7 @@ class _PersonalInfoScreenState extends State<PersonalInfoScreen> {
                               if (value!.isEmpty ||
                                   num.tryParse(value) == null) {
                                 return 'Please enter an age';
-                              } else if (num.parse(value!) > 120) {
+                              } else if (num.parse(value) > 120) {
                                 return 'Please enter a valid age';
                               }
                               return null;
@@ -290,6 +336,14 @@ class _PersonalInfoScreenState extends State<PersonalInfoScreen> {
                                   backgroundColor: Theme.of(context)
                                       .colorScheme
                                       .primaryContainer),
+                            ),
+                          ),
+                          SizedBox(height: 16),
+                          Center(
+                            child: TextButton(
+                              onPressed: () => _showResetPasswordConfirmation(
+                                  userData['email']),
+                              child: Text("RESET PASSWORD"),
                             ),
                           ),
                         ],
