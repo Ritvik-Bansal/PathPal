@@ -18,6 +18,7 @@ class AuthScreen extends StatefulWidget {
 class _AuthScreenState extends State<AuthScreen> {
   var _isLogin = true;
   var _isAuthenticating = false;
+  bool _isMounted = false;
 
   Future<String> fetchCountryCode() async {
     try {
@@ -30,13 +31,13 @@ class _AuthScreenState extends State<AuthScreen> {
       }
     } catch (e) {
       print('Error fetching country code: $e');
-      return 'US'; // Default to US if there's an error
+      return 'US';
     }
   }
 
   void _submit(String email, String password,
       {String? name, String? phone, String? age}) async {
-    setState(() {
+    _safeSetState(() {
       _isAuthenticating = true;
     });
 
@@ -65,9 +66,27 @@ class _AuthScreenState extends State<AuthScreen> {
         ),
       );
     } finally {
-      setState(() {
+      _safeSetState(() {
         _isAuthenticating = false;
       });
+    }
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _isMounted = true;
+  }
+
+  @override
+  void dispose() {
+    _isMounted = false;
+    super.dispose();
+  }
+
+  void _safeSetState(VoidCallback fn) {
+    if (_isMounted) {
+      setState(fn);
     }
   }
 
@@ -95,7 +114,7 @@ class _AuthScreenState extends State<AuthScreen> {
               onSubmit: _submit,
               isAuthenticating: _isAuthenticating,
               onToggleAuthMode: () {
-                setState(() {
+                _safeSetState(() {
                   _isLogin = !_isLogin;
                 });
               },

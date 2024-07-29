@@ -43,6 +43,7 @@ dependencies:
   country_picker: ^2.0.26
   http: ^1.2.2
   url_launcher: ^6.1.10 
+  flutter_svg: ^1.0.0
 
 dev_dependencies:
   flutter_test:
@@ -78,7 +79,11 @@ flutter:
     - assets/images/login_logo.png
     - assets/images/default_profile_image.png
     - assets/icon/icon_removed_bg.png
-
+    - assets/images/facebook.png
+    - assets/images/instagram.png
+    - assets/images/message.png
+    - assets/images/email.png
+    - assets/images/whatsapp.png
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/assets-and-images/#resolution-aware
 

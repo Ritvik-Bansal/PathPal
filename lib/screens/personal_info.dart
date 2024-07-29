@@ -90,6 +90,20 @@ class _PersonalInfoScreenState extends State<PersonalInfoScreen> {
         'age': _enteredAge,
         'phone_number': _enteredPhone,
       });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+              'Profile updated successfully. Please log out and log back in to see the changes.'),
+          duration: Duration(seconds: 10),
+          action: SnackBarAction(
+            label: 'OK',
+            onPressed: () {
+              ScaffoldMessenger.of(context).hideCurrentSnackBar();
+            },
+          ),
+        ),
+      );
     } on FirebaseAuthException catch (error) {
       if (error.code == 'email-already-in-use') {
         //...
@@ -100,6 +114,7 @@ class _PersonalInfoScreenState extends State<PersonalInfoScreen> {
           content: Text(error.message ?? 'Authentication failed'),
         ),
       );
+    } finally {
       setState(() {
         _isAuthenticating = false;
       });

@@ -13,7 +13,7 @@ class Tabs extends StatefulWidget {
 
 class _TabsState extends State<Tabs> {
   int _selectedIndex = 0;
-  String _fullName = "Profile";
+  late Future<String> _fullNameFuture;
 
   final List<Widget> _widgetOptions = <Widget>[
     const HomeScreen(),
@@ -23,10 +23,10 @@ class _TabsState extends State<Tabs> {
   @override
   void initState() {
     super.initState();
-    _fetchUserName();
+    _fullNameFuture = _fetchUserName();
   }
 
-  Future<void> _fetchUserName() async {
+  Future<String> _fetchUserName() async {
     final user = FirebaseAuth.instance.currentUser;
     if (user != null) {
       final docSnapshot = await FirebaseFirestore.instance
@@ -34,11 +34,10 @@ class _TabsState extends State<Tabs> {
           .doc(user.uid)
           .get();
       if (docSnapshot.exists) {
-        setState(() {
-          _fullName = docSnapshot.data()?['name'] ?? "Profile";
-        });
+        return docSnapshot.data()?['name'] ?? "Profile";
       }
     }
+    return "Profile";
   }
 
   void _onItemTapped(int index) {
@@ -49,18 +48,25 @@ class _TabsState extends State<Tabs> {
 
   @override
   Widget build(BuildContext context) {
-    _fetchUserName();
-
     return Scaffold(
       appBar: _selectedIndex == 1
           ? AppBar(
-              title: Text(
-                _fullName.toUpperCase(),
-                style: const TextStyle(
-                  fontFamily: 'BricolageGrotesque',
-                  fontSize: 28,
-                  fontWeight: FontWeight.bold,
-                ),
+              title: FutureBuilder<String>(
+                future: _fullNameFuture,
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return CircularProgressIndicator();
+                  }
+                  final fullName = snapshot.data ?? "Profile";
+                  return Text(
+                    fullName.toUpperCase(),
+                    style: const TextStyle(
+                      fontFamily: 'BricolageGrotesque',
+                      fontSize: 28,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  );
+                },
               ),
               centerTitle: true,
               backgroundColor: Theme.of(context).colorScheme.primaryContainer,
@@ -69,6 +75,7 @@ class _TabsState extends State<Tabs> {
           : null,
       body: _widgetOptions.elementAt(_selectedIndex),
       bottomNavigationBar: BottomNavigationBar(
+        backgroundColor: Colors.white,
         items: const <BottomNavigationBarItem>[
           BottomNavigationBarItem(
             icon: Icon(Icons.home),

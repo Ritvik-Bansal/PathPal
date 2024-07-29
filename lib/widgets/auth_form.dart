@@ -26,6 +26,7 @@ class AuthForm extends StatefulWidget {
 }
 
 class _AuthFormState extends State<AuthForm> {
+  bool _isMounted = false;
   final _form = GlobalKey<FormState>();
   var _enteredEmail = "";
   var _enteredPassword = "";
@@ -38,7 +39,14 @@ class _AuthFormState extends State<AuthForm> {
   @override
   void initState() {
     super.initState();
+    _isMounted = true;
     _initializeCountry();
+  }
+
+  @override
+  void dispose() {
+    _isMounted = false;
+    super.dispose();
   }
 
   Future<String> fetchCountryCode() async {
@@ -58,9 +66,17 @@ class _AuthFormState extends State<AuthForm> {
 
   void _initializeCountry() async {
     final countryCode = await fetchCountryCode();
-    setState(() {
-      country = CountryParser.parseCountryCode(countryCode);
-    });
+    if (_isMounted) {
+      setState(() {
+        country = CountryParser.parseCountryCode(countryCode);
+      });
+    }
+  }
+
+  void _safeSetState(VoidCallback fn) {
+    if (_isMounted) {
+      setState(fn);
+    }
   }
 
   void _trySubmit() {
@@ -112,7 +128,7 @@ class _AuthFormState extends State<AuthForm> {
                   label: Text('Password'),
                   suffixIcon: IconButton(
                     onPressed: () {
-                      setState(() {
+                      _safeSetState(() {
                         _passwordVisible = !_passwordVisible;
                       });
                     },
@@ -162,7 +178,7 @@ class _AuthFormState extends State<AuthForm> {
                         showCountryPicker(
                           context: context,
                           onSelect: (Country country) {
-                            setState(() {
+                            _safeSetState(() {
                               this.country = country;
                             });
                           },
