@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -5,6 +7,11 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:pathpal/widgets/forget_password_bottom_sheet.dart';
 import 'package:pathpal/widgets/auth_form.dart';
+
+import 'package:firebase_storage/firebase_storage.dart';
+import 'dart:io';
+import 'package:flutter/services.dart' show rootBundle;
+import 'package:path_provider/path_provider.dart';
 
 final _firebase = FirebaseAuth.instance;
 
@@ -48,6 +55,12 @@ class _AuthScreenState extends State<AuthScreen> {
       } else {
         final userCredentials = await _firebase.createUserWithEmailAndPassword(
             email: email, password: password);
+
+        String imageUrl =
+            await _uploadDefaultProfilePicture(userCredentials.user!.uid);
+
+        await userCredentials.user!.updatePhotoURL(imageUrl);
+
         await FirebaseFirestore.instance
             .collection('users')
             .doc(userCredentials.user!.uid)
@@ -55,7 +68,8 @@ class _AuthScreenState extends State<AuthScreen> {
           'name': name,
           'email': email,
           'age': age,
-          'phone_number': phone
+          'phone_number': phone,
+          'profile_picture': imageUrl
         });
       }
     } on FirebaseAuthException catch (error) {
@@ -70,6 +84,26 @@ class _AuthScreenState extends State<AuthScreen> {
         _isAuthenticating = false;
       });
     }
+  }
+
+  Future<String> _uploadDefaultProfilePicture(String userId) async {
+    ByteData data =
+        await rootBundle.load('assets/images/default_profile_image.png');
+    List<int> bytes = data.buffer.asUint8List();
+
+    final tempDir = await getTemporaryDirectory();
+    File file =
+        await File('${tempDir.path}/default_profile_image.png').create();
+    await file.writeAsBytes(bytes);
+
+    final ref = FirebaseStorage.instance
+        .ref()
+        .child('user_images')
+        .child('$userId.png');
+    await ref.putFile(file);
+
+    final url = await ref.getDownloadURL();
+    return url;
   }
 
   @override

@@ -13,7 +13,7 @@ class Tabs extends StatefulWidget {
 
 class _TabsState extends State<Tabs> {
   int _selectedIndex = 0;
-  late Future<String> _fullNameFuture;
+  String _userName = "Profile";
 
   final List<Widget> _widgetOptions = <Widget>[
     const HomeScreen(),
@@ -23,10 +23,10 @@ class _TabsState extends State<Tabs> {
   @override
   void initState() {
     super.initState();
-    _fullNameFuture = _fetchUserName();
+    _fetchUserName();
   }
 
-  Future<String> _fetchUserName() async {
+  Future<void> _fetchUserName() async {
     final user = FirebaseAuth.instance.currentUser;
     if (user != null) {
       final docSnapshot = await FirebaseFirestore.instance
@@ -34,10 +34,11 @@ class _TabsState extends State<Tabs> {
           .doc(user.uid)
           .get();
       if (docSnapshot.exists) {
-        return docSnapshot.data()?['name'] ?? "Profile";
+        setState(() {
+          _userName = docSnapshot.data()?['name'] ?? "Profile";
+        });
       }
     }
-    return "Profile";
   }
 
   void _onItemTapped(int index) {
@@ -51,22 +52,13 @@ class _TabsState extends State<Tabs> {
     return Scaffold(
       appBar: _selectedIndex == 1
           ? AppBar(
-              title: FutureBuilder<String>(
-                future: _fullNameFuture,
-                builder: (context, snapshot) {
-                  if (snapshot.connectionState == ConnectionState.waiting) {
-                    return CircularProgressIndicator();
-                  }
-                  final fullName = snapshot.data ?? "Profile";
-                  return Text(
-                    fullName.toUpperCase(),
-                    style: const TextStyle(
-                      fontFamily: 'BricolageGrotesque',
-                      fontSize: 28,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  );
-                },
+              title: Text(
+                _userName.toUpperCase(),
+                style: const TextStyle(
+                  fontFamily: 'BricolageGrotesque',
+                  fontSize: 28,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
               centerTitle: true,
               backgroundColor: Theme.of(context).colorScheme.primaryContainer,

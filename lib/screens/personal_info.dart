@@ -20,10 +20,8 @@ class _PersonalInfoScreenState extends State<PersonalInfoScreen> {
   var _enteredName = "";
   var _enteredPhone = "";
   var _enteredAge = "";
-
-  final _form = GlobalKey<FormState>();
   var _isAuthenticating = false;
-
+  final _form = GlobalKey<FormState>();
   final user = FirebaseAuth.instance.currentUser;
 
   Country? country;
@@ -91,33 +89,38 @@ class _PersonalInfoScreenState extends State<PersonalInfoScreen> {
         'phone_number': _enteredPhone,
       });
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-              'Profile updated successfully. Please log out and log back in to see the changes.'),
-          duration: Duration(seconds: 10),
-          action: SnackBarAction(
-            label: 'OK',
-            onPressed: () {
-              ScaffoldMessenger.of(context).hideCurrentSnackBar();
-            },
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+                'Profile updated successfully. Please log out and log back in to see the changes.'),
+            duration: Duration(seconds: 10),
+            action: SnackBarAction(
+              label: 'OK',
+              onPressed: () {
+                if (mounted) {
+                  ScaffoldMessenger.of(context).hideCurrentSnackBar();
+                }
+              },
+            ),
           ),
-        ),
-      );
-    } on FirebaseAuthException catch (error) {
-      if (error.code == 'email-already-in-use') {
-        //...
+        );
       }
-      ScaffoldMessenger.of(context).clearSnackBars();
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(error.message ?? 'Authentication failed'),
-        ),
-      );
+    } on FirebaseAuthException catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).clearSnackBars();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(error.message ?? 'Authentication failed'),
+          ),
+        );
+      }
     } finally {
-      setState(() {
-        _isAuthenticating = false;
-      });
+      if (mounted) {
+        setState(() {
+          _isAuthenticating = false;
+        });
+      }
     }
   }
 
@@ -208,163 +211,169 @@ class _PersonalInfoScreenState extends State<PersonalInfoScreen> {
                   String number = userData['phone_number'];
                   number = number.substring(number.indexOf(' ') + 1);
 
-                  return SingleChildScrollView(
-                    padding: EdgeInsets.all(16),
-                    child: Form(
-                      key: _form,
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            "Personal Information",
-                            style: TextStyle(
-                                fontSize: 18, fontWeight: FontWeight.bold),
-                          ),
-                          SizedBox(height: 16),
-                          TextFormField(
-                            decoration: const InputDecoration(
-                              label: Text('First and Last Name'),
-                            ),
-                            initialValue: userData['name'],
-                            enableSuggestions: true,
-                            validator: (value) {
-                              if (value == null ||
-                                  !value.trim().contains(' ') ||
-                                  value.isEmpty) {
-                                return 'Please enter a full name';
-                              }
-                              return null;
-                            },
-                            onSaved: (value) {
-                              _enteredName = value!;
-                            },
-                          ),
-                          SizedBox(height: 10),
-                          TextFormField(
-                            decoration: const InputDecoration(
-                              label: Text('Age'),
-                            ),
-                            initialValue: userData['age'],
-                            keyboardType: TextInputType.number,
-                            validator: (value) {
-                              if (value!.isEmpty ||
-                                  num.tryParse(value) == null) {
-                                return 'Please enter an age';
-                              } else if (num.parse(value) > 120) {
-                                return 'Please enter a valid age';
-                              }
-                              return null;
-                            },
-                            onSaved: (value) {
-                              _enteredAge = value!;
-                            },
-                          ),
-                          SizedBox(height: 30),
-                          Text(
-                            "Account Information",
-                            style: TextStyle(
-                                fontSize: 18, fontWeight: FontWeight.bold),
-                          ),
-                          SizedBox(height: 16),
-                          TextFormField(
-                            decoration: const InputDecoration(
-                              label: Text('Email'),
-                            ),
-                            initialValue: userData['email'],
-                            keyboardType: TextInputType.emailAddress,
-                            autocorrect: false,
-                            textCapitalization: TextCapitalization.none,
-                            readOnly: true,
-                            validator: (value) {
-                              if (value == null ||
-                                  value.trim().isEmpty ||
-                                  !value.contains('@')) {
-                                return 'Please enter a valid email address';
-                              }
-                              return null;
-                            },
-                            onSaved: (newValue) {
-                              _enteredEmail = newValue!;
-                            },
-                          ),
-                          SizedBox(height: 10),
-                          TextFormField(
-                            onFieldSubmitted: (phoneNumber) {
-                              if (country != null) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                    content: Text(
-                                        '+${country!.phoneCode}$phoneNumber'),
-                                  ),
-                                );
-                              }
-                            },
-                            initialValue: number,
-                            keyboardType: TextInputType.number,
-                            decoration: InputDecoration(
-                              contentPadding: EdgeInsets.only(top: 15),
-                              hintText: 'Enter phone number',
-                              prefixIcon: GestureDetector(
-                                behavior: HitTestBehavior.opaque,
-                                onTap: showPicker,
-                                child: Container(
-                                  height: 56,
-                                  width: 100,
-                                  alignment: Alignment.center,
-                                  child: country != null
-                                      ? Text(
-                                          '${country!.flagEmoji} +${country!.phoneCode}',
-                                          style: const TextStyle(
-                                            fontSize: 18,
-                                            color: Colors.black,
-                                            fontWeight: FontWeight.bold,
-                                          ),
-                                        )
-                                      : const Text('Select Country'),
+                  return _isAuthenticating
+                      ? CircularProgressIndicator()
+                      : SingleChildScrollView(
+                          padding: EdgeInsets.all(16),
+                          child: Form(
+                            key: _form,
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  "Personal Information",
+                                  style: TextStyle(
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.bold),
                                 ),
-                              ),
+                                SizedBox(height: 16),
+                                TextFormField(
+                                  decoration: const InputDecoration(
+                                    label: Text('First and Last Name'),
+                                  ),
+                                  initialValue: userData['name'],
+                                  enableSuggestions: true,
+                                  validator: (value) {
+                                    if (value == null ||
+                                        !value.trim().contains(' ') ||
+                                        value.isEmpty) {
+                                      return 'Please enter a full name';
+                                    }
+                                    return null;
+                                  },
+                                  onSaved: (value) {
+                                    _enteredName = value!;
+                                  },
+                                ),
+                                SizedBox(height: 10),
+                                TextFormField(
+                                  decoration: const InputDecoration(
+                                    label: Text('Age'),
+                                  ),
+                                  initialValue: userData['age'],
+                                  keyboardType: TextInputType.number,
+                                  validator: (value) {
+                                    if (value!.isEmpty ||
+                                        num.tryParse(value) == null) {
+                                      return 'Please enter an age';
+                                    } else if (num.parse(value) > 120) {
+                                      return 'Please enter a valid age';
+                                    }
+                                    return null;
+                                  },
+                                  onSaved: (value) {
+                                    _enteredAge = value!;
+                                  },
+                                ),
+                                SizedBox(height: 30),
+                                Text(
+                                  "Account Information",
+                                  style: TextStyle(
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.bold),
+                                ),
+                                SizedBox(height: 16),
+                                TextFormField(
+                                  decoration: const InputDecoration(
+                                    label: Text('Email'),
+                                  ),
+                                  initialValue: userData['email'],
+                                  keyboardType: TextInputType.emailAddress,
+                                  autocorrect: false,
+                                  textCapitalization: TextCapitalization.none,
+                                  readOnly: true,
+                                  validator: (value) {
+                                    if (value == null ||
+                                        value.trim().isEmpty ||
+                                        !value.contains('@')) {
+                                      return 'Please enter a valid email address';
+                                    }
+                                    return null;
+                                  },
+                                  onSaved: (newValue) {
+                                    _enteredEmail = newValue!;
+                                  },
+                                ),
+                                SizedBox(height: 10),
+                                TextFormField(
+                                  onFieldSubmitted: (phoneNumber) {
+                                    if (country != null) {
+                                      ScaffoldMessenger.of(context)
+                                          .showSnackBar(
+                                        SnackBar(
+                                          content: Text(
+                                              '+${country!.phoneCode}$phoneNumber'),
+                                        ),
+                                      );
+                                    }
+                                  },
+                                  initialValue: number,
+                                  keyboardType: TextInputType.number,
+                                  decoration: InputDecoration(
+                                    contentPadding: EdgeInsets.only(top: 15),
+                                    hintText: 'Enter phone number',
+                                    prefixIcon: GestureDetector(
+                                      behavior: HitTestBehavior.opaque,
+                                      onTap: showPicker,
+                                      child: Container(
+                                        height: 56,
+                                        width: 100,
+                                        alignment: Alignment.center,
+                                        child: country != null
+                                            ? Text(
+                                                '${country!.flagEmoji} +${country!.phoneCode}',
+                                                style: const TextStyle(
+                                                  fontSize: 18,
+                                                  color: Colors.black,
+                                                  fontWeight: FontWeight.bold,
+                                                ),
+                                              )
+                                            : const Text('Select Country'),
+                                      ),
+                                    ),
+                                  ),
+                                  validator: (value) {
+                                    if (value!.isEmpty) {
+                                      return 'Please enter a phone number';
+                                    } else if (!RegExp(
+                                            r'^\s*(?:\+?(\d{1,3}))?[-. (]*(\d{3})[-. )]*(\d{3})[-. ]*(\d{4})(?: *x(\d+))?\s*$')
+                                        .hasMatch(value)) {
+                                      return 'Please enter a valid phone number';
+                                    }
+                                    return null;
+                                  },
+                                  onSaved: (value) {
+                                    if (country != null) {
+                                      _enteredPhone =
+                                          "+${country!.phoneCode} ${value!}";
+                                    }
+                                  },
+                                ),
+                                SizedBox(height: 24),
+                                Center(
+                                  child: ElevatedButton(
+                                    onPressed: _submit,
+                                    child: Text("SAVE"),
+                                    style: ElevatedButton.styleFrom(
+                                        minimumSize: Size(double.infinity, 50),
+                                        backgroundColor: Theme.of(context)
+                                            .colorScheme
+                                            .primaryContainer),
+                                  ),
+                                ),
+                                SizedBox(height: 16),
+                                Center(
+                                  child: TextButton(
+                                    onPressed: () =>
+                                        _showResetPasswordConfirmation(
+                                            userData['email']),
+                                    child: Text("RESET PASSWORD"),
+                                  ),
+                                ),
+                              ],
                             ),
-                            validator: (value) {
-                              if (value!.isEmpty) {
-                                return 'Please enter a phone number';
-                              } else if (!RegExp(
-                                      r'^\s*(?:\+?(\d{1,3}))?[-. (]*(\d{3})[-. )]*(\d{3})[-. ]*(\d{4})(?: *x(\d+))?\s*$')
-                                  .hasMatch(value)) {
-                                return 'Please enter a valid phone number';
-                              }
-                              return null;
-                            },
-                            onSaved: (value) {
-                              if (country != null) {
-                                _enteredPhone =
-                                    "+${country!.phoneCode} ${value!}";
-                              }
-                            },
                           ),
-                          SizedBox(height: 24),
-                          Center(
-                            child: ElevatedButton(
-                              onPressed: _submit,
-                              child: Text("SAVE"),
-                              style: ElevatedButton.styleFrom(
-                                  minimumSize: Size(double.infinity, 50),
-                                  backgroundColor: Theme.of(context)
-                                      .colorScheme
-                                      .primaryContainer),
-                            ),
-                          ),
-                          SizedBox(height: 16),
-                          Center(
-                            child: TextButton(
-                              onPressed: () => _showResetPasswordConfirmation(
-                                  userData['email']),
-                              child: Text("RESET PASSWORD"),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  );
+                        );
                 },
               ),
             )

@@ -6,6 +6,8 @@ import 'package:pathpal/screens/auth.dart';
 import 'package:pathpal/screens/tabs.dart';
 import 'firebase_options.dart';
 
+//need to fix app icon on android
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(
