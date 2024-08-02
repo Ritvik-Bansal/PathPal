@@ -181,21 +181,21 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     'PERSONAL INFORMATION',
                     nextScreen: PersonalInfoScreen(),
                   ),
-                  BuildSettingItem(
-                    Icons.calendar_today,
-                    'TRIP CALENDAR',
-                    nextScreen: PersonalInfoScreen(),
-                  ),
-                  BuildSettingItem(
-                    Icons.settings,
-                    'SETTINGS',
-                    nextScreen: PersonalInfoScreen(),
-                  ),
-                  BuildSettingItem(
-                    Icons.notifications,
-                    'NOTIFICATIONS',
-                    nextScreen: PersonalInfoScreen(),
-                  ),
+                  // BuildSettingItem(
+                  //   Icons.calendar_today,
+                  //   'TRIP CALENDAR',
+                  //   nextScreen: PersonalInfoScreen(),
+                  // ),
+                  // BuildSettingItem(
+                  //   Icons.settings,
+                  //   'SETTINGS',
+                  //   nextScreen: PersonalInfoScreen(),
+                  // ),
+                  // BuildSettingItem(
+                  //   Icons.notifications,
+                  //   'NOTIFICATIONS',
+                  //   nextScreen: PersonalInfoScreen(),
+                  // ),
                   const SizedBox(height: 20),
                   const Text(
                     'Help and Support',
