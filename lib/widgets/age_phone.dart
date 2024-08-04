@@ -1,5 +1,4 @@
 import 'dart:convert';
-
 import 'package:flutter/material.dart';
 import 'package:country_picker/country_picker.dart';
 import 'package:http/http.dart' as http;
@@ -48,7 +47,7 @@ class _AgePhoneState extends State<AgePhone> {
       }
     } catch (e) {
       print('Error fetching country code: $e');
-      return 'US'; // Default to US if there's an error
+      return 'US';
     }
   }
 
@@ -80,23 +79,40 @@ class _AgePhoneState extends State<AgePhone> {
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      elevation: 1,
-      color: Theme.of(context).colorScheme.surface,
-      margin: const EdgeInsets.all(10),
-      child: Padding(
-        padding: const EdgeInsets.all(20),
+    return SingleChildScrollView(
+      child: Dialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+        ),
         child: Form(
           key: _form,
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
+              Image.asset('assets/icon/icon_removed_bg.png'),
+              Text(
+                'Additional Information',
+                style: TextStyle(
+                  fontSize: 30,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              SizedBox(height: 10),
+              Text(
+                'In order to use PathPal, you must provide some additional information.',
+                textAlign: TextAlign.left,
+                style: TextStyle(
+                  fontSize: 16,
+                  color: Colors.grey.shade600,
+                ),
+              ),
+              SizedBox(height: 15),
               if (country != null)
                 TextFormField(
                   keyboardType: TextInputType.number,
                   decoration: InputDecoration(
-                    contentPadding: EdgeInsets.only(top: 15),
                     hintText: 'Enter phone number',
+                    contentPadding: EdgeInsets.symmetric(vertical: 20),
                     prefixIcon: GestureDetector(
                       behavior: HitTestBehavior.opaque,
                       onTap: () {
@@ -129,12 +145,12 @@ class _AgePhoneState extends State<AgePhone> {
                       },
                       child: Container(
                         height: 56,
-                        width: 100,
+                        width: 70,
                         alignment: Alignment.center,
                         child: Text(
                           '${country!.flagEmoji} +${country!.phoneCode}',
                           style: const TextStyle(
-                            fontSize: 18,
+                            fontSize: 16,
                             color: Colors.black,
                             fontWeight: FontWeight.bold,
                           ),
@@ -156,23 +172,23 @@ class _AgePhoneState extends State<AgePhone> {
                     _enteredPhone = "+${country!.phoneCode} ${value!}";
                   },
                 ),
-              if (true)
-                TextFormField(
-                  decoration: const InputDecoration(label: Text('Age')),
-                  keyboardType: TextInputType.number,
-                  validator: (value) {
-                    if (value!.isEmpty || num.tryParse(value) == null) {
-                      return 'Please enter an age';
-                    } else if (num.parse(value) > 120) {
-                      return 'Please enter a valid age';
-                    }
-                    return null;
-                  },
-                  onSaved: (value) {
-                    _enteredAge = value!;
-                  },
-                ),
-              const SizedBox(height: 20),
+              SizedBox(height: 10),
+              TextFormField(
+                decoration: const InputDecoration(label: Text('Age')),
+                keyboardType: TextInputType.number,
+                validator: (value) {
+                  if (value!.isEmpty || num.tryParse(value) == null) {
+                    return 'Please enter an age';
+                  } else if (num.parse(value) > 120) {
+                    return 'Please enter a valid age';
+                  }
+                  return null;
+                },
+                onSaved: (value) {
+                  _enteredAge = value!;
+                },
+              ),
+              const SizedBox(height: 15),
               if (widget.isAuthenticating)
                 const CircularProgressIndicator()
               else
