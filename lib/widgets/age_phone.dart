@@ -3,39 +3,25 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:country_picker/country_picker.dart';
 import 'package:http/http.dart' as http;
-import 'package:pathpal/components/login_tile.dart';
-import 'package:pathpal/widgets/google_auth_flow.dart';
 
-class AuthForm extends StatefulWidget {
-  final bool isLogin;
-  final Function(String, String, {String? name, String? phone, String? age})
-      onSubmit;
+class AgePhone extends StatefulWidget {
+  final Function({String? phone, String? age}) onSubmit;
   final bool isAuthenticating;
-  final VoidCallback onToggleAuthMode;
-  final VoidCallback onForgotPassword;
-
-  const AuthForm({
+  const AgePhone({
     Key? key,
-    required this.isLogin,
     required this.onSubmit,
     required this.isAuthenticating,
-    required this.onToggleAuthMode,
-    required this.onForgotPassword,
   }) : super(key: key);
 
   @override
-  _AuthFormState createState() => _AuthFormState();
+  _AgePhoneState createState() => _AgePhoneState();
 }
 
-class _AuthFormState extends State<AuthForm> {
+class _AgePhoneState extends State<AgePhone> {
   bool _isMounted = false;
   final _form = GlobalKey<FormState>();
-  var _enteredEmail = "";
-  var _enteredPassword = "";
-  var _enteredName = "";
   var _enteredPhone = "";
   var _enteredAge = "";
-  var _passwordVisible = false;
   Country? country;
 
   @override
@@ -87,9 +73,6 @@ class _AuthFormState extends State<AuthForm> {
 
     _form.currentState!.save();
     widget.onSubmit(
-      _enteredEmail,
-      _enteredPassword,
-      name: _enteredName,
       phone: _enteredPhone,
       age: _enteredAge,
     );
@@ -108,67 +91,7 @@ class _AuthFormState extends State<AuthForm> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              TextFormField(
-                decoration: const InputDecoration(label: Text('Email Address')),
-                keyboardType: TextInputType.emailAddress,
-                autocorrect: false,
-                textCapitalization: TextCapitalization.none,
-                validator: (value) {
-                  if (value == null ||
-                      value.trim().isEmpty ||
-                      !value.contains('@')) {
-                    return 'Please enter a valid email address';
-                  }
-                  return null;
-                },
-                onSaved: (newValue) {
-                  _enteredEmail = newValue!;
-                },
-              ),
-              TextFormField(
-                decoration: InputDecoration(
-                  label: Text('Password'),
-                  suffixIcon: IconButton(
-                    onPressed: () {
-                      _safeSetState(() {
-                        _passwordVisible = !_passwordVisible;
-                      });
-                    },
-                    icon: Icon(
-                      _passwordVisible
-                          ? Icons.visibility_off
-                          : Icons.visibility,
-                    ),
-                  ),
-                ),
-                obscureText: !_passwordVisible,
-                validator: (value) {
-                  if (value == null || value.trim().length < 6) {
-                    return "Password must be at least 6 characters long";
-                  }
-                  return null;
-                },
-                onSaved: (newValue) {
-                  _enteredPassword = newValue!;
-                },
-              ),
-              if (!widget.isLogin)
-                TextFormField(
-                  decoration: const InputDecoration(label: Text('Full Name')),
-                  enableSuggestions: true,
-                  validator: (value) {
-                    if (value == null ||
-                        !value.trim().contains(' ') ||
-                        value.isEmpty) {
-                      return 'Please enter a full name';
-                    }
-                    return null;
-                  },
-                  onSaved: (value) {
-                    _enteredName = value!;
-                  },
-                ),
-              if (!widget.isLogin && country != null)
+              if (country != null)
                 TextFormField(
                   keyboardType: TextInputType.number,
                   decoration: InputDecoration(
@@ -233,7 +156,7 @@ class _AuthFormState extends State<AuthForm> {
                     _enteredPhone = "+${country!.phoneCode} ${value!}";
                   },
                 ),
-              if (!widget.isLogin)
+              if (true)
                 TextFormField(
                   decoration: const InputDecoration(label: Text('Age')),
                   keyboardType: TextInputType.number,
@@ -259,27 +182,8 @@ class _AuthFormState extends State<AuthForm> {
                     backgroundColor:
                         Theme.of(context).colorScheme.primaryContainer,
                   ),
-                  child: Text(widget.isLogin ? "LOGIN" : "SIGN UP"),
+                  child: Text('Submit'),
                 ),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Text(widget.isLogin ? "New User?" : "Have an account?"),
-                  TextButton(
-                    onPressed: widget.onToggleAuthMode,
-                    child: Text(widget.isLogin ? "Sign up" : "Login"),
-                  ),
-                ],
-              ),
-              if (widget.isLogin)
-                TextButton(
-                  onPressed: widget.onForgotPassword,
-                  child: Text("Forgot Password?"),
-                ),
-              LoginTile(
-                imagePath: 'assets/images/google_logo.png',
-                onTap: () => GoogleAuthFlow().startAuthFlow(context),
-              ),
             ],
           ),
         ),

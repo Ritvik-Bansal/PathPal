@@ -92,8 +92,7 @@ class _PersonalInfoScreenState extends State<PersonalInfoScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(
-                'Profile updated successfully. Please log out and log back in to see the changes.'),
+            content: Text('Profile updated successfully.'),
             duration: Duration(seconds: 10),
             action: SnackBarAction(
               label: 'OK',
@@ -187,11 +186,11 @@ class _PersonalInfoScreenState extends State<PersonalInfoScreen> {
           ? Container(
               height: double.infinity,
               color: Colors.white,
-              child: FutureBuilder<DocumentSnapshot>(
-                future: FirebaseFirestore.instance
+              child: StreamBuilder<DocumentSnapshot>(
+                stream: FirebaseFirestore.instance
                     .collection('users')
                     .doc(user!.uid)
-                    .get(),
+                    .snapshots(),
                 builder: (context, snapshot) {
                   if (snapshot.connectionState == ConnectionState.waiting) {
                     return Center(child: CircularProgressIndicator());
@@ -209,6 +208,7 @@ class _PersonalInfoScreenState extends State<PersonalInfoScreen> {
                       snapshot.data!.data() as Map<String, dynamic>;
 
                   String number = userData['phone_number'];
+                  print(number);
                   number = number.substring(number.indexOf(' ') + 1);
 
                   return _isAuthenticating
