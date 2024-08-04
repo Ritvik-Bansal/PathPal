@@ -92,7 +92,8 @@ class _PersonalInfoScreenState extends State<PersonalInfoScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Profile updated successfully.'),
+            content: Text(
+                'Profile updated successfully. You may need to log out and log back in to see changes'),
             duration: Duration(seconds: 10),
             action: SnackBarAction(
               label: 'OK',

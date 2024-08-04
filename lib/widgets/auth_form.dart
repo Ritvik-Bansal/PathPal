@@ -3,7 +3,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:country_picker/country_picker.dart';
 import 'package:http/http.dart' as http;
-import 'package:pathpal/components/login_tile.dart';
+import 'package:pathpal/widgets/login_tile.dart';
 import 'package:pathpal/widgets/google_auth_flow.dart';
 
 class AuthForm extends StatefulWidget {
@@ -279,6 +279,7 @@ class _AuthFormState extends State<AuthForm> {
               LoginTile(
                 imagePath: 'assets/images/google_logo.png',
                 onTap: () => GoogleAuthFlow().startAuthFlow(context),
+                title: "Sign in with Google",
               ),
             ],
           ),
