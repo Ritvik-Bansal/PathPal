@@ -20,28 +20,31 @@ class _TabsState extends State<Tabs> {
     const HomeScreen(),
     const ProfileScreen()
   ];
-
+  late Stream<DocumentSnapshot> _userStream;
   @override
   void initState() {
     super.initState();
-    _fetchUserName();
+    _initUserStream();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _checkAndShowAgePhoneScreen();
     });
   }
 
-  Future<void> _fetchUserName() async {
+  void _initUserStream() {
     final user = FirebaseAuth.instance.currentUser;
     if (user != null) {
-      final docSnapshot = await FirebaseFirestore.instance
+      _userStream = FirebaseFirestore.instance
           .collection('users')
           .doc(user.uid)
-          .get();
-      if (docSnapshot.exists) {
-        setState(() {
-          _userName = docSnapshot.data()?['name'] ?? "Profile";
-        });
-      }
+          .snapshots();
+      _userStream.listen((snapshot) {
+        if (snapshot.exists) {
+          setState(() {
+            _userName =
+                (snapshot.data() as Map<String, dynamic>)?['name'] ?? "Profile";
+          });
+        }
+      });
     }
   }
 
@@ -140,5 +143,12 @@ class _TabsState extends State<Tabs> {
         onTap: _onItemTapped,
       ),
     );
+  }
+
+  @override
+  void dispose() {
+    // Make sure to cancel the stream subscription when the widget is disposed
+    _userStream.listen((_) {}).cancel();
+    super.dispose();
   }
 }

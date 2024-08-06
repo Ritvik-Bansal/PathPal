@@ -14,36 +14,6 @@ class LoginTile extends StatelessWidget {
   Widget build(BuildContext context) {
     return Column(
       children: [
-        Padding(
-          padding: const EdgeInsets.symmetric(vertical: 10.0),
-          child: Row(
-            children: [
-              Expanded(
-                child: Divider(
-                  thickness: 1.0,
-                  color: Colors.grey.shade300,
-                ),
-              ),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 10.0),
-                child: Text(
-                  "Other sign-in options",
-                  style: TextStyle(
-                    color: Colors.grey.shade700,
-                    fontSize: 14,
-                  ),
-                ),
-              ),
-              Expanded(
-                child: Divider(
-                  thickness: 2.0,
-                  color: Colors.grey.shade300,
-                ),
-              ),
-            ],
-          ),
-        ),
-        SizedBox(height: 10),
         GestureDetector(
           onTap: onTap,
           child: Container(

@@ -3,8 +3,9 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:country_picker/country_picker.dart';
 import 'package:http/http.dart' as http;
+import 'package:pathpal/services/apple_auth_flow.dart';
 import 'package:pathpal/widgets/login_tile.dart';
-import 'package:pathpal/widgets/google_auth_flow.dart';
+import 'package:pathpal/services/google_auth_flow.dart';
 
 class AuthForm extends StatefulWidget {
   final bool isLogin;
@@ -276,10 +277,46 @@ class _AuthFormState extends State<AuthForm> {
                   onPressed: widget.onForgotPassword,
                   child: Text("Forgot Password?"),
                 ),
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 10.0),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Divider(
+                        thickness: 1.0,
+                        color: Colors.grey.shade300,
+                      ),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 10.0),
+                      child: Text(
+                        "Other sign-in options",
+                        style: TextStyle(
+                          color: Colors.grey.shade700,
+                          fontSize: 14,
+                        ),
+                      ),
+                    ),
+                    Expanded(
+                      child: Divider(
+                        thickness: 2.0,
+                        color: Colors.grey.shade300,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              SizedBox(height: 10),
               LoginTile(
                 imagePath: 'assets/images/google_logo.png',
                 onTap: () => GoogleAuthFlow().startAuthFlow(context),
                 title: "Sign in with Google",
+              ),
+              SizedBox(height: 10),
+              LoginTile(
+                imagePath: 'assets/images/apple_logo.png',
+                onTap: () => AppleAuthFlow().startAuthFlow(context),
+                title: "Sign in with Apple",
               ),
             ],
           ),
