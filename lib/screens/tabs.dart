@@ -41,7 +41,7 @@ class _TabsState extends State<Tabs> {
         if (snapshot.exists) {
           setState(() {
             _userName =
-                (snapshot.data() as Map<String, dynamic>)?['name'] ?? "Profile";
+                (snapshot.data() as Map<String, dynamic>)['name'] ?? "Profile";
           });
         }
       });
@@ -50,7 +50,8 @@ class _TabsState extends State<Tabs> {
 
   Future<void> _checkAndShowAgePhoneScreen() async {
     final user = FirebaseAuth.instance.currentUser;
-    if (user != null) {
+    if (user != null &&
+        user.providerData.any((info) => info.providerId == 'google.com')) {
       final docSnapshot = await FirebaseFirestore.instance
           .collection('users')
           .doc(user.uid)

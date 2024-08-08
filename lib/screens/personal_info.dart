@@ -82,19 +82,18 @@ class _PersonalInfoScreenState extends State<PersonalInfoScreen> {
       await FirebaseFirestore.instance
           .collection('users')
           .doc(_firebase.currentUser!.uid)
-          .set({
+          .update({
         'name': _enteredName,
-        'email': _enteredEmail,
         'age': _enteredAge,
         'phone_number': _enteredPhone,
       });
 
+      await _firebase.currentUser!.updateDisplayName(_enteredName);
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(
-                'Profile updated successfully. You may need to log out and log back in to see changes'),
-            duration: Duration(seconds: 10),
+            content: Text('Profile updated successfully.'),
             action: SnackBarAction(
               label: 'OK',
               onPressed: () {
@@ -106,12 +105,12 @@ class _PersonalInfoScreenState extends State<PersonalInfoScreen> {
           ),
         );
       }
-    } on FirebaseAuthException catch (error) {
+    } catch (error) {
       if (mounted) {
         ScaffoldMessenger.of(context).clearSnackBars();
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(error.message ?? 'Authentication failed'),
+            content: Text('Failed to update profile: ${error.toString()}'),
           ),
         );
       }
@@ -213,7 +212,16 @@ class _PersonalInfoScreenState extends State<PersonalInfoScreen> {
                   number = number.substring(number.indexOf(' ') + 1);
 
                   return _isAuthenticating
-                      ? CircularProgressIndicator()
+                      ? Center(
+                          child: Container(
+                            width: 100,
+                            height: 100,
+                            child: Padding(
+                              padding: const EdgeInsets.all(16.0),
+                              child: CircularProgressIndicator(),
+                            ),
+                          ),
+                        )
                       : SingleChildScrollView(
                           padding: EdgeInsets.all(16),
                           child: Form(

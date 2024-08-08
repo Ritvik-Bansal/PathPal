@@ -56,9 +56,12 @@ class _AuthScreenState extends State<AuthScreen> {
         final userCredentials = await _firebase.createUserWithEmailAndPassword(
             email: email, password: password);
 
+        await Future.delayed(Duration(seconds: 1));
+
         String imageUrl =
             await _uploadDefaultProfilePicture(userCredentials.user!.uid);
 
+        await userCredentials.user!.updateDisplayName(name);
         await userCredentials.user!.updatePhotoURL(imageUrl);
 
         await FirebaseFirestore.instance
@@ -70,13 +73,20 @@ class _AuthScreenState extends State<AuthScreen> {
           'age': age,
           'phone_number': phone,
           'profile_picture': imageUrl
-        });
+        }, SetOptions(merge: true));
       }
     } on FirebaseAuthException catch (error) {
       ScaffoldMessenger.of(context).clearSnackBars();
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(error.message ?? 'Authentication failed'),
+        ),
+      );
+    } catch (error) {
+      ScaffoldMessenger.of(context).clearSnackBars();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('An error occurred: $error'),
         ),
       );
     } finally {
