@@ -49,6 +49,7 @@ dependencies:
   sqflite: ^2.3.3+1
   path: ^1.9.0
   latlong2: ^0.9.1
+  flutter_dotenv: ^5.1.0
 
 dev_dependencies:
   flutter_test:
@@ -96,6 +97,7 @@ flutter:
     - assets/icon/icon_removed_bg.png
     - assets/icon/pathpal_foreground.png
     - assets/icon/pathpal_logo.png
+    - .env
 
 
 

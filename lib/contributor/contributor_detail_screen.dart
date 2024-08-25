@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:intl/intl.dart';
 import 'package:pathpal/data/airline_data.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -396,7 +397,7 @@ class _ContributorDetailScreenState extends State<ContributorDetailScreen> {
         Uri.parse('https://api.mailjet.com/v3.1/send'),
         headers: {
           'Authorization':
-              'Basic ${base64Encode(utf8.encode('86136855fd21846719117c03bf649165:04779ffe131a8142958182c5ee861e61'))}',
+              'Basic ${base64Encode(utf8.encode('${dotenv.env["MAILAPI"]}'))}',
           'Content-Type': 'application/json',
         },
         body: json.encode({

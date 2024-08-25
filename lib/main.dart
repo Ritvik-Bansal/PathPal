@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:pathpal/data/airport_database.dart';
 import 'package:pathpal/screens/auth.dart';
 import 'package:pathpal/screens/tabs.dart';
@@ -8,6 +9,7 @@ import 'package:pathpal/screens/email_verification_screen.dart';
 import 'firebase_options.dart';
 
 void main() async {
+  await dotenv.load(fileName: ".env");
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
