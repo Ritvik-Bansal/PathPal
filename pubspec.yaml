@@ -1,5 +1,5 @@
 name: pathpal
-description: "A new Flutter project."
+description: "Traveling alone can be challenging, especially for elderly individuals, people with disabilities, families with young children, or anyone needing extra assistance. PathPal is here to help by connecting travelers in need with volunteers willing to assist them on their journey. Whether you need help navigating an unfamiliar airport, require assistance with forms, or simply want a companion during your trip, PathPal makes travel easier and safer."
 # The following line prevents the package from being accidentally published to
 # pub.dev using `flutter pub publish`. This is preferred for private packages.
 publish_to: 'none' # Remove this line if you wish to publish to pub.dev

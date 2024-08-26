@@ -69,7 +69,7 @@ class DefaultFirebaseOptions {
         '742216978719-10gfiii6otqrekls515oc70l35a8bqee.apps.googleusercontent.com',
     iosClientId:
         '742216978719-q8m6e20462u25sosmi4ik2t9jfhtaiip.apps.googleusercontent.com',
-    iosBundleId: 'com.example.pathpal',
+    iosBundleId: 'com.pathpal.pathpal',
   );
 
   static FirebaseOptions macos = FirebaseOptions(
@@ -78,7 +78,7 @@ class DefaultFirebaseOptions {
     messagingSenderId: '742216978719',
     projectId: 'pathpal-d5503',
     storageBucket: 'pathpal-d5503.appspot.com',
-    iosBundleId: 'com.example.pathpal',
+    iosBundleId: 'com.pathpal.pathpal',
   );
 
   static FirebaseOptions windows = FirebaseOptions(

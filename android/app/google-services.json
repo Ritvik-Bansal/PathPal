@@ -9,7 +9,7 @@
       "client_info": {
         "mobilesdk_app_id": "1:742216978719:android:18a92a5dd792d5a8d7202a",
         "android_client_info": {
-          "package_name": "com.example.pathpal"
+          "package_name": "com.pathpal.pathpal"
         }
       },
       "oauth_client": [
@@ -17,7 +17,7 @@
           "client_id": "742216978719-10gfiii6otqrekls515oc70l35a8bqee.apps.googleusercontent.com",
           "client_type": 1,
           "android_info": {
-            "package_name": "com.example.pathpal",
+            "package_name": "com.pathpal.pathpal",
             "certificate_hash": "0250614b4dca7617d7508677e26ab1bb339ebaa7"
           }
         },
@@ -42,7 +42,7 @@
               "client_id": "742216978719-q8m6e20462u25sosmi4ik2t9jfhtaiip.apps.googleusercontent.com",
               "client_type": 2,
               "ios_info": {
-                "bundle_id": "com.example.pathpal"
+                "bundle_id": "com.pathpal.pathpal"
               }
             }
           ]
@@ -78,7 +78,7 @@
               "client_id": "742216978719-q8m6e20462u25sosmi4ik2t9jfhtaiip.apps.googleusercontent.com",
               "client_type": 2,
               "ios_info": {
-                "bundle_id": "com.example.pathpal"
+                "bundle_id": "com.pathpal.pathpal"
               }
             }
           ]

@@ -204,24 +204,6 @@ class _ContributorCardState extends State<ContributorCard> {
     });
   }
 
-  Future<void> _toggleFavorite() async {
-    try {
-      await widget.firestoreService
-          .toggleFavoriteContributor(widget.contributorId);
-      setState(() {
-        _isFavorite = !_isFavorite;
-      });
-      ScaffoldMessenger.of(context).clearSnackBars();
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text("Favorites updated"),
-        ),
-      );
-    } catch (e) {
-      // Handle error
-    }
-  }
-
   String _formatAirlineName(String? airlineName) {
     if (airlineName == null) return 'Unknown';
 

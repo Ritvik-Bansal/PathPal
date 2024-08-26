@@ -8,7 +8,7 @@
 PRODUCT_NAME = pathpal
 
 // The application's bundle identifier
-PRODUCT_BUNDLE_IDENTIFIER = com.example.pathpal
+PRODUCT_BUNDLE_IDENTIFIER = com.pathpal.pathpal
 
 // The copyright displayed in application information
-PRODUCT_COPYRIGHT = Copyright © 2024 com.example. All rights reserved.
+PRODUCT_COPYRIGHT = Copyright © 2024 com.pathpal. All rights reserved.
