@@ -1,12 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 
-//<a href="https://www.flaticon.com/free-icons/instagram-logo" title="instagram logo icons">Instagram logo icons created by Freepik - Flaticon</a>
-//<a href="https://www.flaticon.com/free-icons/message" title="message icons">Message icons created by bqlqn - Flaticon</a>//<a href="https://www.flaticon.com/free-icons/whatsapp" title="whatsapp icons">Whatsapp icons created by Freepik - Flaticon</a>
-//<a href="https://www.flaticon.com/free-icons/facebook" title="facebook icons">Facebook icons created by Ilham Fitrotul Hayat - Flaticon</a>
-//<a href="https://www.flaticon.com/free-icons/email" title="email icons">Email icons created by Uniconlabs - Flaticon</a>
-//<a href="https://www.flaticon.com/free-icons/whatsapp" title="whatsapp icons">Whatsapp icons created by Freepik - Flaticon</a>
-
 const Color customBlue = Color.fromARGB(255, 203, 231, 255);
 
 class ContactUsScreen extends StatelessWidget {
