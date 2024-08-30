@@ -109,18 +109,6 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
               onPressed: canResendEmail ? sendVerificationEmail : null,
               child: const Text('Resend Verification Email'),
             ),
-            const SizedBox(height: 20),
-            TextButton(
-              child: const Text('Back to Login'),
-              onPressed: () async {
-                await FirebaseAuth.instance.signOut();
-                if (mounted) {
-                  Navigator.of(context).pushReplacement(
-                    MaterialPageRoute(builder: (context) => const AuthScreen()),
-                  );
-                }
-              },
-            ),
           ],
         ),
       ),

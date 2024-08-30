@@ -35,20 +35,14 @@ class _MyStuffScreenState extends State<MyStuffScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return DefaultTabController(
-      length: 2,
-      child: Scaffold(
-        backgroundColor: Theme.of(context).colorScheme.surface,
-        appBar: AppBar(
-          title: const Text('My Stuff'),
-          bottom: const TabBar(
-            tabs: [
-              Tab(text: 'My Form Submissions'),
-              Tab(text: 'Favorited Trips'),
-            ],
-          ),
-        ),
-        body: TabBarView(
+    return Scaffold(
+      backgroundColor: Theme.of(context).colorScheme.surface,
+      appBar: AppBar(
+        title: const Text('My Trips'),
+      ),
+      body: SingleChildScrollView(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             _buildContributorForms(),
             _buildFavoritedContributors(),
@@ -77,21 +71,35 @@ class _MyStuffScreenState extends State<MyStuffScreen> {
         }
 
         if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-          return const Center(child: Text('No trip forms found.'));
+          return const SizedBox.shrink(); // Don't show anything if no forms
         }
 
-        return ListView.builder(
-          itemCount: snapshot.data!.docs.length,
-          itemBuilder: (context, index) {
-            var doc = snapshot.data!.docs[index];
-            var data = doc.data() as Map<String, dynamic>;
-            return ContributorFormCard(
-              data: data,
-              docId: doc.id,
-              onEdit: () => _editForm(doc.id, data),
-              onDelete: () => _deleteForm(doc.id),
-            );
-          },
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Text('My Form Submissions',
+                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+            ),
+            ListView.builder(
+              shrinkWrap: true,
+              physics: NeverScrollableScrollPhysics(),
+              itemCount: snapshot.data!.docs.length,
+              itemBuilder: (context, index) {
+                var doc = snapshot.data!.docs[index];
+                var data = doc.data() as Map<String, dynamic>;
+                return ContributorFormCard(
+                  data: data,
+                  docId: doc.id,
+                  onEdit: () => _editForm(doc.id, data),
+                  onDelete: () => _deleteForm(doc.id),
+                  airlineFetcher: _airlineFetcher,
+                  firestoreService: _firestoreService,
+                );
+              },
+            ),
+          ],
         );
       },
     );
@@ -116,57 +124,72 @@ class _MyStuffScreenState extends State<MyStuffScreen> {
         }
 
         if (!snapshot.hasData || !snapshot.data!.exists) {
-          return const Center(child: Text('No favorited trips found.'));
+          return const SizedBox.shrink();
         }
 
         var userData = snapshot.data!.data() as Map<String, dynamic>?;
         if (userData == null) {
-          return const Center(child: Text('Trip data is not available.'));
+          return const SizedBox.shrink();
         }
 
         List<String> favoritedContributors =
             List<String>.from(userData['favoritedContributors'] ?? []);
 
         if (favoritedContributors.isEmpty) {
-          return const Center(child: Text('No favorited trips found.'));
+          return const SizedBox.shrink();
         }
 
-        return ListView.builder(
-          itemCount: favoritedContributors.length,
-          itemBuilder: (context, index) {
-            return FutureBuilder<DocumentSnapshot>(
-              future: _firestore
-                  .collection('contributors')
-                  .doc(favoritedContributors[index])
-                  .get(),
-              builder: (context, contributorSnapshot) {
-                if (contributorSnapshot.connectionState ==
-                    ConnectionState.waiting) {
-                  return const ListTile(title: Text('Loading...'));
-                }
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Text(
+                'Favorited Trips',
+                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+              ),
+            ),
+            ListView.builder(
+              shrinkWrap: true,
+              physics: NeverScrollableScrollPhysics(),
+              itemCount: favoritedContributors.length,
+              itemBuilder: (context, index) {
+                return FutureBuilder<DocumentSnapshot>(
+                  future: _firestore
+                      .collection('contributors')
+                      .doc(favoritedContributors[index])
+                      .get(),
+                  builder: (context, contributorSnapshot) {
+                    if (contributorSnapshot.connectionState ==
+                        ConnectionState.waiting) {
+                      return const ListTile(title: Text('Loading...'));
+                    }
 
-                if (contributorSnapshot.hasError ||
-                    !contributorSnapshot.hasData) {
-                  return const ListTile(title: Text('Error loading trip'));
-                }
+                    if (contributorSnapshot.hasError ||
+                        !contributorSnapshot.hasData) {
+                      return const ListTile(title: Text('Error loading trip'));
+                    }
 
-                var contributorData =
-                    contributorSnapshot.data!.data() as Map<String, dynamic>?;
-                if (contributorData == null) {
-                  return const ListTile(title: Text('Trip data not available'));
-                }
+                    var contributorData = contributorSnapshot.data!.data()
+                        as Map<String, dynamic>?;
+                    if (contributorData == null) {
+                      return const ListTile(
+                          title: Text('Trip data not available'));
+                    }
 
-                return FavoritedContributorCard(
-                  contributorData: contributorData,
-                  onUnfavorite: () =>
-                      _unfavoriteContributor(favoritedContributors[index]),
-                  contributorId: favoritedContributors[index],
-                  airlineFetcher: _airlineFetcher,
-                  firestoreService: _firestoreService,
+                    return FavoritedContributorCard(
+                      contributorData: contributorData,
+                      onUnfavorite: () =>
+                          _unfavoriteContributor(favoritedContributors[index]),
+                      contributorId: favoritedContributors[index],
+                      airlineFetcher: _airlineFetcher,
+                      firestoreService: _firestoreService,
+                    );
+                  },
                 );
               },
-            );
-          },
+            ),
+          ],
         );
       },
     );
@@ -270,6 +293,8 @@ class ContributorFormCard extends StatelessWidget {
   final String docId;
   final VoidCallback onEdit;
   final VoidCallback onDelete;
+  final AirlineFetcher airlineFetcher;
+  final FirestoreService firestoreService;
 
   const ContributorFormCard({
     super.key,
@@ -277,65 +302,90 @@ class ContributorFormCard extends StatelessWidget {
     required this.docId,
     required this.onEdit,
     required this.onDelete,
+    required this.airlineFetcher,
+    required this.firestoreService,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 5),
-      margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
-      decoration: BoxDecoration(
-        border: Border.all(
-          color: const Color.fromARGB(255, 180, 221, 255),
-          width: 5,
-        ),
-        borderRadius: BorderRadius.circular(30),
-        color: Theme.of(context).colorScheme.surface,
-      ),
-      child: Row(
-        children: [
-          const SizedBox(width: 5),
-          const CircleAvatar(
-            backgroundColor: Color.fromARGB(255, 180, 221, 255),
-            child: Icon(Icons.flight),
+    String from = data['departureAirport']?['iata'] ?? 'Unknown';
+    String to = data['arrivalAirport']?['iata'] ?? 'Unknown';
+    String? via = data['layoverAirport']?['iata'];
+
+    String flightRoute = '$from to $to';
+    if (via != null) {
+      flightRoute += ' via $via';
+    }
+
+    return InkWell(
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => ContributorDetailScreen(
+              contributorId: docId,
+              userId: data['userId'],
+              airlineFetcher: airlineFetcher,
+              firestoreService: firestoreService,
+            ),
           ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+        );
+      },
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 5),
+        margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+        decoration: BoxDecoration(
+          border: Border.all(
+            color: const Color.fromARGB(255, 180, 221, 255),
+            width: 5,
+          ),
+          borderRadius: BorderRadius.circular(30),
+          color: Theme.of(context).colorScheme.surface,
+        ),
+        child: Row(
+          children: [
+            const SizedBox(width: 5),
+            const CircleAvatar(
+              backgroundColor: Color.fromARGB(255, 180, 221, 255),
+              child: Icon(Icons.flight),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    flightRoute,
+                    style: const TextStyle(
+                        fontWeight: FontWeight.bold, fontSize: 18),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    DateFormat("MMM d, yyyy':' h:mm a")
+                        .format((data['flightDateTime'] as Timestamp).toDate()),
+                    style: const TextStyle(fontSize: 16),
+                  ),
+                ],
+              ),
+            ),
+            Column(
+              mainAxisSize: MainAxisSize.min,
               children: [
-                Text(
-                  'Flight: ${data['flightNumberFirstLeg'].toString().toUpperCase()}',
-                  style: const TextStyle(
-                      fontWeight: FontWeight.bold, fontSize: 18),
+                IconButton(
+                  icon: const Icon(Icons.edit),
+                  onPressed: onEdit,
                 ),
-                const SizedBox(height: 4),
-                Text(
-                  DateFormat("MMM d, yyyy':' h:mm a")
-                      .format((data['flightDateTime'] as Timestamp).toDate()),
-                  style: const TextStyle(fontSize: 16),
+                IconButton(
+                  icon: const Icon(
+                    Icons.delete,
+                    color: Colors.red,
+                  ),
+                  onPressed: onDelete,
                 ),
               ],
             ),
-          ),
-          Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              IconButton(
-                icon: const Icon(
-                  Icons.edit,
-                ),
-                onPressed: onEdit,
-              ),
-              IconButton(
-                icon: const Icon(
-                  Icons.delete,
-                ),
-                onPressed: onDelete,
-              ),
-            ],
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

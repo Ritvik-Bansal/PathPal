@@ -136,8 +136,8 @@ class _TabsState extends State<Tabs> {
             label: 'Home',
           ),
           BottomNavigationBarItem(
-            icon: Icon(Icons.front_hand),
-            label: 'My Stuff',
+            icon: Icon(Icons.flight),
+            label: 'My Trips',
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.person),

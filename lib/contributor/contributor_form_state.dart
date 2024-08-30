@@ -11,8 +11,6 @@ class ContributorFormState {
   Airport? arrivalAirport;
   Airport? layoverAirport;
   bool hasLayover = false;
-  bool emailConfirmed = false;
-  bool termsAccepted = false;
   String email = '';
   DateTime? flightDateTime;
 
@@ -27,18 +25,18 @@ class ContributorFormState {
 
   void updateFlightNumber(String number) {
     if (hasLayover) {
-      flightNumberFirstLeg = number;
+      flightNumberFirstLeg = number.toUpperCase();
     } else {
-      _flightNumber = number;
+      _flightNumber = number.toUpperCase();
     }
   }
 
   void updateFlightNumberFirstLeg(String number) {
-    flightNumberFirstLeg = number;
+    flightNumberFirstLeg = number.toUpperCase();
   }
 
   void updateFlightNumberSecondLeg(String number) {
-    flightNumberSecondLeg = number;
+    flightNumberSecondLeg = number.toUpperCase();
   }
 
   void updatePartySize(int size) {
@@ -67,20 +65,8 @@ class ContributorFormState {
     hasLayover = false;
   }
 
-  void updateEmailConfirmation(bool confirmed) {
-    emailConfirmed = confirmed;
-  }
-
-  void updateTermsAcceptance(bool accepted) {
-    termsAccepted = accepted;
-  }
-
   void setUserContactInfo(String userEmail) {
     email = userEmail;
-  }
-
-  bool isFormValid() {
-    return isFlightInfoValid() && emailConfirmed && termsAccepted;
   }
 
   bool isFlightInfoValid() {
@@ -125,8 +111,6 @@ class ContributorFormState {
           ? Airport.fromMap(map['layoverAirport'])
           : null
       ..hasLayover = hasLayover
-      ..emailConfirmed = map['emailConfirmed'] ?? false
-      ..termsAccepted = map['termsAccepted'] ?? false
       ..email = map['userEmail'] ?? ''
       ..flightDateTime = (map['flightDateTime'] as Timestamp?)?.toDate();
 
@@ -140,8 +124,6 @@ class ContributorFormState {
       'departureAirport': departureAirport?.toJson(),
       'arrivalAirport': arrivalAirport?.toJson(),
       'hasLayover': hasLayover,
-      'emailConfirmed': emailConfirmed,
-      'termsAccepted': termsAccepted,
       'userEmail': email,
       'flightDateTime':
           flightDateTime != null ? Timestamp.fromDate(flightDateTime!) : null,
@@ -177,8 +159,6 @@ class ContributorFormState {
         ? Airport.fromMap(map['layoverAirport'])
         : null;
     hasLayover = map['hasLayover'] ?? false;
-    emailConfirmed = map['emailConfirmed'] ?? false;
-    termsAccepted = map['termsAccepted'] ?? false;
     email = map['userEmail'] ?? '';
     flightDateTime = (map['flightDateTime'] as Timestamp?)?.toDate();
   }

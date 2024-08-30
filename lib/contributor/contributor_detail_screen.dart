@@ -121,9 +121,6 @@ class _ContributorDetailScreenState extends State<ContributorDetailScreen> {
 
   Widget _buildMainScaffold(BuildContext context,
       Map<String, dynamic> contributorData, Map<String, dynamic> userData) {
-    String? leg1 = contributorData['flightNumberFirstLeg'];
-    String? leg2 = contributorData['flightNumberSecondLeg'];
-
     return Scaffold(
       backgroundColor: Theme.of(context).colorScheme.surface,
       appBar: AppBar(
@@ -159,9 +156,9 @@ class _ContributorDetailScreenState extends State<ContributorDetailScreen> {
             _buildFlightRoute(contributorData),
             const SizedBox(height: 10),
             _buildMapWidget(contributorData),
-            const SizedBox(height: 20),
-            _buildSectionTitle('Details'),
-            _buildDetailsContainer(contributorData, leg1, leg2),
+            // const SizedBox(height: 20),
+            // _buildSectionTitle('Details'),
+            // _buildDetailsContainer(contributorData, leg1, leg2),
             const SizedBox(height: 10),
             OutlinedButton(
               onPressed: () => _showContactConfirmationDialog(
@@ -235,8 +232,12 @@ class _ContributorDetailScreenState extends State<ContributorDetailScreen> {
                             point: point,
                             width: 30,
                             height: 30,
-                            child: const Icon(Icons.location_on,
-                                color: Colors.red, size: 30),
+                            child: const Icon(
+                              Icons.location_on,
+                              color: Colors.red,
+                              size: 30,
+                            ),
+                            alignment: Alignment(0.0, -0.8),
                           ))
                       .toList(),
                 ),
@@ -437,75 +438,75 @@ class _ContributorDetailScreenState extends State<ContributorDetailScreen> {
     }
   }
 
-  Widget _buildSectionTitle(String title) {
-    return Text(
-      title,
-      style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-      textAlign: TextAlign.center,
-    );
-  }
+  // Widget _buildSectionTitle(String title) {
+  //   return Text(
+  //     title,
+  //     style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+  //     textAlign: TextAlign.center,
+  //   );
+  // }
 
-  Widget _buildDetailsContainer(
-      Map<String, dynamic> contributorData, String? leg1, String? leg2) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16),
-      child: Container(
-        margin: const EdgeInsets.all(10),
-        padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 25),
-        decoration: BoxDecoration(
-          border: Border.all(width: 3),
-          borderRadius: BorderRadius.circular(30),
-        ),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 8),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _buildDetailRow('Flight Date',
-                  _formatDate(contributorData['flightDateTime'] as Timestamp)),
-              _buildDetailRow('Flight Time',
-                  _formatTime(contributorData['flightDateTime'] as Timestamp)),
-              _buildDetailRow(
-                  'Leg 1 Flight #', leg1 != null ? leg1.toUpperCase() : 'N/A'),
-              _buildDetailRow(
-                  'Leg 2 Flight #', leg2 != null ? leg2.toUpperCase() : 'N/A',
-                  showIfEmpty: true),
-              _buildDetailRow('Airline',
-                  _getAirlineName(contributorData['flightNumberFirstLeg'])),
-              const SizedBox(height: 10),
-              _buildDetailRow('Start location',
-                  _getAirportInfo(contributorData['departureAirport'])),
-              _buildDetailRow('End Location',
-                  _getAirportInfo(contributorData['arrivalAirport'])),
-              _buildDetailRow('Layover Location',
-                  _getAirportInfo(contributorData['layoverAirport']),
-                  showIfEmpty: true),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
+  // Widget _buildDetailsContainer(
+  //     Map<String, dynamic> contributorData, String? leg1, String? leg2) {
+  //   return Padding(
+  //     padding: const EdgeInsets.symmetric(horizontal: 16),
+  //     child: Container(
+  //       margin: const EdgeInsets.all(10),
+  //       padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 25),
+  //       decoration: BoxDecoration(
+  //         border: Border.all(width: 3),
+  //         borderRadius: BorderRadius.circular(30),
+  //       ),
+  //       child: Padding(
+  //         padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 8),
+  //         child: Column(
+  //           crossAxisAlignment: CrossAxisAlignment.start,
+  //           children: [
+  //             _buildDetailRow('Flight Date',
+  //                 _formatDate(contributorData['flightDateTime'] as Timestamp)),
+  //             _buildDetailRow('Flight Time',
+  //                 _formatTime(contributorData['flightDateTime'] as Timestamp)),
+  //             _buildDetailRow(
+  //                 'Leg 1 Flight #', leg1 != null ? leg1.toUpperCase() : 'N/A'),
+  //             _buildDetailRow(
+  //                 'Leg 2 Flight #', leg2 != null ? leg2.toUpperCase() : 'N/A',
+  //                 showIfEmpty: true),
+  //             _buildDetailRow('Airline',
+  //                 _getAirlineName(contributorData['flightNumberFirstLeg'])),
+  //             const SizedBox(height: 10),
+  //             _buildDetailRow('Start location',
+  //                 _getAirportInfo(contributorData['departureAirport'])),
+  //             _buildDetailRow('End Location',
+  //                 _getAirportInfo(contributorData['arrivalAirport'])),
+  //             _buildDetailRow('Layover Location',
+  //                 _getAirportInfo(contributorData['layoverAirport']),
+  //                 showIfEmpty: true),
+  //           ],
+  //         ),
+  //       ),
+  //     ),
+  //   );
+  // }
 
-  Widget _buildDetailRow(String label, String value,
-      {bool showIfEmpty = false}) {
-    if (!showIfEmpty && (value.isEmpty || value == 'N/A')) {
-      return const SizedBox.shrink();
-    }
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          SizedBox(
-              width: 140,
-              child: Text(label,
-                  style: const TextStyle(fontWeight: FontWeight.bold))),
-          Expanded(child: Text(value)),
-        ],
-      ),
-    );
-  }
+  // Widget _buildDetailRow(String label, String value,
+  //     {bool showIfEmpty = false}) {
+  //   if (!showIfEmpty && (value.isEmpty || value == 'N/A')) {
+  //     return const SizedBox.shrink();
+  //   }
+  //   return Padding(
+  //     padding: const EdgeInsets.symmetric(vertical: 4),
+  //     child: Row(
+  //       crossAxisAlignment: CrossAxisAlignment.start,
+  //       children: [
+  //         SizedBox(
+  //             width: 140,
+  //             child: Text(label,
+  //                 style: const TextStyle(fontWeight: FontWeight.bold))),
+  //         Expanded(child: Text(value)),
+  //       ],
+  //     ),
+  //   );
+  // }
 
   String _formatDate(Timestamp timestamp) {
     return DateFormat('MMMM d, yyyy').format(timestamp.toDate());
@@ -529,26 +530,60 @@ class _ContributorDetailScreenState extends State<ContributorDetailScreen> {
     String departureCode = contributorData['departureAirport']?['iata'] ?? '';
     String arrivalCode = contributorData['arrivalAirport']?['iata'] ?? '';
     String? layoverCode = contributorData['layoverAirport']?['iata'];
-    String airline = _getAirlineName(contributorData['flightNumberFirstLeg']);
+    String airline1 = _getAirlineName(contributorData['flightNumberFirstLeg']);
+    String? airline2 = contributorData['flightNumberSecondLeg'] != null
+        ? _getAirlineName(contributorData['flightNumberSecondLeg'])
+        : null;
+    String flightDate =
+        _formatDate(contributorData['flightDateTime'] as Timestamp);
+    String flightTime =
+        _formatTime(contributorData['flightDateTime'] as Timestamp);
 
     return Column(
       children: [
         const SizedBox(height: 20),
         const Text(
-          'Flight Route and Map',
+          'Flight Route and Details',
           style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
         ),
         if (layoverCode != null) ...[
-          _buildFlightLeg(departureCode, layoverCode, airline),
+          _buildFlightLeg(
+            departureCode,
+            layoverCode,
+            airline1,
+            contributorData['flightNumberFirstLeg'],
+            flightDate,
+            flightTime,
+            isFirstLeg: true,
+          ),
           const SizedBox(height: 10),
-          _buildFlightLeg(layoverCode, arrivalCode, airline),
+          _buildFlightLeg(
+            layoverCode,
+            arrivalCode,
+            airline2 ?? airline1,
+            contributorData['flightNumberSecondLeg'] ?? '',
+            '',
+            '',
+            isFirstLeg: false,
+            layoverInfo: _getAirportInfo(contributorData['layoverAirport']),
+          ),
         ] else
-          _buildFlightLeg(departureCode, arrivalCode, airline),
+          _buildFlightLeg(
+            departureCode,
+            arrivalCode,
+            airline1,
+            contributorData['flightNumberFirstLeg'],
+            flightDate,
+            flightTime,
+            isFirstLeg: true,
+          ),
       ],
     );
   }
 
-  Widget _buildFlightLeg(String from, String to, String airline) {
+  Widget _buildFlightLeg(String from, String to, String airline,
+      String flightNumber, String date, String time,
+      {required bool isFirstLeg, String? layoverInfo}) {
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 10),
       margin: const EdgeInsets.all(10),
@@ -557,31 +592,66 @@ class _ContributorDetailScreenState extends State<ContributorDetailScreen> {
             color: const Color.fromARGB(255, 180, 221, 255), width: 5),
         borderRadius: BorderRadius.circular(30),
       ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-        crossAxisAlignment: CrossAxisAlignment.start,
+      child: Column(
         children: [
-          Text(from,
-              style:
-                  const TextStyle(fontWeight: FontWeight.bold, fontSize: 30)),
-          Column(
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Transform.rotate(
-                angle: 90 * 3.14159 / 180,
-                child: const Icon(
-                  Icons.flight_outlined,
-                  size: 30,
-                ),
+              Text(
+                from,
+                style:
+                    const TextStyle(fontWeight: FontWeight.bold, fontSize: 30),
               ),
-              const SizedBox(height: 10),
-              Text(airline,
-                  style: const TextStyle(
-                      fontStyle: FontStyle.italic, fontSize: 17)),
+              Column(
+                children: [
+                  Transform.rotate(
+                    angle: 90 * 3.14159 / 180,
+                    child: const Icon(
+                      Icons.flight_outlined,
+                      size: 30,
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  Text(
+                    airline,
+                    style: const TextStyle(
+                        fontStyle: FontStyle.italic, fontSize: 17),
+                  ),
+                ],
+              ),
+              Text(
+                to,
+                style:
+                    const TextStyle(fontWeight: FontWeight.bold, fontSize: 30),
+              ),
             ],
           ),
-          Text(to,
-              style:
-                  const TextStyle(fontWeight: FontWeight.bold, fontSize: 30)),
+          const SizedBox(height: 15),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              if (layoverInfo != null)
+                Text(
+                  'Layover: $layoverInfo',
+                  style: const TextStyle(fontSize: 16),
+                ),
+              Text(
+                'Flight: ${flightNumber.toUpperCase()}',
+                style: const TextStyle(fontSize: 16),
+              ),
+              if (isFirstLeg) ...[
+                Text(
+                  'Date: $date',
+                  style: const TextStyle(fontSize: 16),
+                ),
+                Text(
+                  'Time: $time',
+                  style: const TextStyle(fontSize: 16),
+                ),
+              ],
+            ],
+          ),
         ],
       ),
     );

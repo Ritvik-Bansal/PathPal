@@ -85,7 +85,7 @@ class FirestoreService {
     return null;
   }
 
-  Future submitContributorForm(ContributorFormState formState) async {
+  Future<void> submitContributorForm(ContributorFormState formState) async {
     try {
       final user = _auth.currentUser;
       if (user == null) throw Exception('No authenticated user found');
@@ -94,8 +94,6 @@ class FirestoreService {
         'userId': user.uid,
         'userEmail': formState.email,
         'partySize': formState.partySize,
-        'emailConfirmed': formState.emailConfirmed,
-        'termsAccepted': formState.termsAccepted,
         'departureAirport': formState.departureAirport?.toJson(),
         'arrivalAirport': formState.arrivalAirport?.toJson(),
         'hasLayover': formState.hasLayover,
@@ -105,12 +103,13 @@ class FirestoreService {
 
       if (formState.hasLayover) {
         contributorData['flightNumberFirstLeg'] =
-            formState.flightNumberFirstLeg;
+            formState.flightNumberFirstLeg.toUpperCase();
         contributorData['flightNumberSecondLeg'] =
-            formState.flightNumberSecondLeg;
+            formState.flightNumberSecondLeg.toUpperCase();
         contributorData['layoverAirport'] = formState.layoverAirport?.toJson();
       } else {
-        contributorData['flightNumberFirstLeg'] = formState.flightNumber;
+        contributorData['flightNumberFirstLeg'] =
+            formState.flightNumber.toUpperCase();
       }
 
       await _firestore.collection('contributors').add(contributorData);
@@ -242,8 +241,7 @@ class FirestoreService {
       final doc =
           await _firestore.collection('contributors').doc(contributorId).get();
       if (doc.exists) {
-        var data = doc.data() as Map<String, dynamic>;
-        return data;
+        return doc.data() as Map<String, dynamic>;
       }
     } catch (e) {
       print('Error fetching contributor form data: $e');

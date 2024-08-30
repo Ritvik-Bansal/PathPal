@@ -1,10 +1,13 @@
 import 'dart:convert';
+import 'package:flutter/gestures.dart';
 import 'package:http/http.dart' as http;
 import 'package:flutter/material.dart';
 import 'package:pathpal/contributor/filtered_contributors_screen.dart';
 import 'package:pathpal/receiver/receiver_form_state.dart';
 import 'package:pathpal/receiver/date_selection_page.dart';
 import 'package:pathpal/receiver/airport_selection_page.dart';
+import 'package:pathpal/screens/privacy_policy_screen.dart';
+import 'package:pathpal/screens/terms_conditions_screen.dart';
 import 'package:pathpal/services/firestore_service.dart';
 import 'package:country_picker/country_picker.dart';
 
@@ -23,7 +26,6 @@ class _RecieverFormScreenState extends State<RecieverFormScreen> {
   int _currentPage = 0;
   final int _numPages = 2;
 
-  bool _agreeTerms = false;
   String _phone = "";
   Country? _country;
 
@@ -61,8 +63,8 @@ class _RecieverFormScreenState extends State<RecieverFormScreen> {
     if (existingForm != null) {
       setState(() {
         _formState.updateFromExistingForm(existingForm);
-        _phone = _formState.phoneNumber;
-        _agreeTerms = true;
+        int num = _formState.phoneNumber.trim().indexOf(" ");
+        _phone = _formState.phoneNumber.trim().substring(num + 1);
       });
     }
   }
@@ -75,245 +77,258 @@ class _RecieverFormScreenState extends State<RecieverFormScreen> {
         title: const Text('Seeking help'),
         centerTitle: true,
       ),
-      body: Column(
-        children: [
-          Expanded(
-            child: PageView(
-              controller: _pageController,
-              physics: const NeverScrollableScrollPhysics(),
-              onPageChanged: (index) {
-                setState(() {
-                  _currentPage = index;
-                });
-              },
-              children: [
-                Column(
-                  children: [
-                    AirportSelectionPage(
-                      formState: _formState,
-                      onStartAirportSelected: (airport) {
-                        setState(() {
-                          _formState.updateStartAirport(airport);
-                        });
-                      },
-                      onEndAirportSelected: (airport) {
-                        setState(() {
-                          _formState.updateEndAirport(airport);
-                        });
-                      },
-                    ),
-                    const SizedBox(height: 30),
-                    DateSelectionPage(
-                      formState: _formState,
-                      onDateRangeSelected: (dateRange) {
-                        setState(() {
-                          _formState.updateDateRange(dateRange);
-                        });
-                      },
-                    ),
-                  ],
-                ),
-                SingleChildScrollView(
-                  child: Padding(
-                    padding: const EdgeInsets.all(16.0),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text('Reason for assistance',
-                            style: TextStyle(
-                                fontSize: 18, fontWeight: FontWeight.w500)),
-                        DropdownButtonFormField<String>(
-                          dropdownColor: Theme.of(context).colorScheme.surface,
-                          borderRadius: BorderRadius.circular(30),
-                          value: _formState.reason.isEmpty
-                              ? 'I am elderly'
-                              : _formState.reason,
-                          decoration: InputDecoration(
-                            border: const OutlineInputBorder(),
-                            errorText: (_formState.submitted ||
-                                        _formState.reasonTouched) &&
-                                    !_formState.isReasonValid()
-                                ? 'Reason is required'
-                                : null,
+      body: SafeArea(
+        child: Column(
+          children: [
+            Expanded(
+              child: PageView(
+                controller: _pageController,
+                physics: const NeverScrollableScrollPhysics(),
+                onPageChanged: (index) {
+                  setState(() {
+                    _currentPage = index;
+                  });
+                },
+                children: [
+                  SingleChildScrollView(
+                    child: Padding(
+                      padding: const EdgeInsets.all(16.0),
+                      child: Column(
+                        children: [
+                          AirportSelectionPage(
+                            formState: _formState,
+                            onStartAirportSelected: (airport) {
+                              setState(() {
+                                _formState.updateStartAirport(airport);
+                              });
+                            },
+                            onEndAirportSelected: (airport) {
+                              setState(() {
+                                _formState.updateEndAirport(airport);
+                              });
+                            },
                           ),
-                          items: const [
-                            DropdownMenuItem(
-                                value: 'I am elderly',
-                                child: Text('I am elderly')),
-                            DropdownMenuItem(
-                                value: 'I am a single parent flying with kids',
-                                child: Text(
-                                    'I am a single parent flying with kids')),
-                            DropdownMenuItem(
-                                value: 'I need company',
-                                child: Text('I need company')),
-                            DropdownMenuItem(
-                                value: 'Other', child: Text('Other')),
-                          ],
-                          onChanged: (value) {
-                            setState(() {
-                              _formState.updateReason(value ?? '');
-                            });
-                          },
-                        ),
-                        if (_formState.reason == 'Other')
-                          Padding(
-                            padding: const EdgeInsets.only(top: 8.0),
-                            child: TextFormField(
-                              initialValue: _formState.otherReason,
-                              maxLines: 3,
-                              decoration: const InputDecoration(
-                                hintText: 'Please provide a short description',
-                                border: OutlineInputBorder(),
-                              ),
-                              onChanged: (value) {
-                                _formState.updateOtherReason(value);
-                              },
-                            ),
+                          const SizedBox(height: 30),
+                          DateSelectionPage(
+                            formState: _formState,
+                            onDateRangeSelected: (dateRange) {
+                              setState(() {
+                                _formState.updateDateRange(dateRange);
+                              });
+                            },
                           ),
-                        const SizedBox(height: 16),
-                        const Text('Number of people in your party',
-                            style: TextStyle(
-                                fontSize: 18, fontWeight: FontWeight.w500)),
-                        TextFormField(
-                          initialValue: _formState.partySize.toString(),
-                          keyboardType: TextInputType.number,
-                          decoration: const InputDecoration(
-                            hintText: 'Enter the number of people',
-                            border: OutlineInputBorder(),
-                          ),
-                          onChanged: (value) {
-                            _formState
-                                .updatePartySize(int.tryParse(value) ?? 1);
-                          },
-                        ),
-                        const SizedBox(height: 16),
-                        const Text(
-                          'Enter a phone number',
-                          style: TextStyle(
-                              fontSize: 18, fontWeight: FontWeight.bold),
-                        ),
-                        Row(
-                          children: [
-                            Expanded(
-                              child: TextFormField(
-                                initialValue: _phone,
-                                decoration: InputDecoration(
-                                  labelText: 'Phone Number',
-                                  prefixIcon: _country != null
-                                      ? GestureDetector(
-                                          onTap: () {
-                                            showCountryPicker(
-                                              context: context,
-                                              onSelect: (Country country) {
-                                                setState(() {
-                                                  _country = country;
-                                                });
-                                              },
-                                              favorite: ['US', 'IN'],
-                                            );
-                                          },
-                                          child: Container(
-                                            height: 56,
-                                            width: 70,
-                                            alignment: Alignment.center,
-                                            child: Text(
-                                              '${_country?.flagEmoji ?? ''} +${_country?.phoneCode ?? ''}',
-                                              style: TextStyle(
-                                                fontSize: 16,
-                                                color: Theme.of(context)
-                                                    .colorScheme
-                                                    .onSurface,
-                                                fontWeight: FontWeight.bold,
-                                              ),
-                                            ),
-                                          ),
-                                        )
-                                      : null,
-                                ),
-                                keyboardType: TextInputType.phone,
-                                validator: (value) {
-                                  if (value!.isEmpty) {
-                                    return 'Please enter a phone number';
-                                  } else if (!RegExp(
-                                          r'^\s*(?:\+?(\d{1,3}))?[-. (]*(\d{3})[-. )]*(\d{3})[-. ]*(\d{4})(?: *x(\d+))?\s*$')
-                                      .hasMatch(value)) {
-                                    return 'Please enter a valid phone number';
-                                  }
-                                  return null;
-                                },
-                                onChanged: (value) {
-                                  setState(() {
-                                    _phone = "+${_country!.phoneCode} $value";
-                                    _formState.updatePhoneNumber(_phone);
-                                  });
-                                },
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 25),
-                        const Text(
-                          'Confirm Email',
-                          style: TextStyle(
-                              fontSize: 18, fontWeight: FontWeight.bold),
-                        ),
-                        FutureBuilder<String?>(
-                          future: _firestoreService.getUserEmail(),
-                          builder: (context, snapshot) {
-                            if (snapshot.connectionState ==
-                                ConnectionState.waiting) {
-                              return CircularProgressIndicator(
-                                backgroundColor:
-                                    Theme.of(context).colorScheme.surface,
-                              );
-                            }
-                            final email = snapshot.data ?? 'Email not found';
-                            _formState.setUserContactInfo(email);
-                            return Text('Email: $email',
-                                style: const TextStyle(fontSize: 16));
-                          },
-                        ),
-                        CheckboxListTile(
-                          title: const Text(
-                              'I confirm my email address is correct and up to date'),
-                          value: _formState.emailConfirmed,
-                          onChanged: (value) {
-                            setState(() {
-                              _formState.emailConfirmed = value ?? false;
-                            });
-                          },
-                        ),
-                        const SizedBox(height: 16),
-                        const Text('Terms and Conditions',
-                            style: TextStyle(
-                                fontSize: 18, fontWeight: FontWeight.bold)),
-                        const SizedBox(height: 8),
-                        const Text(
-                          'As a Receiver, I acknowledge that I am seeking assistance from fellow travelers through PathPal. I understand that the responsibility for any risks or issues during travel arrangements lies with me, and I absolve PathPal from any liability or claims arising from such incidents. By using this platform, I agree to be contacted by potential Contributors who may offer assistance during my journey. I also understand the importance of maintaining privacy and confidentiality, particularly regarding personal details, and I commit to respecting the privacy of all users involved in this collaborative travel community.',
-                          style: TextStyle(fontSize: 14),
-                        ),
-                        const SizedBox(height: 16),
-                        CheckboxListTile(
-                          title:
-                              const Text('I accept the terms and conditions'),
-                          value: _agreeTerms,
-                          onChanged: (value) {
-                            setState(() {
-                              _agreeTerms = value ?? false;
-                            });
-                          },
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
                   ),
-                ),
-              ],
+                  SingleChildScrollView(
+                    child: Padding(
+                      padding: const EdgeInsets.all(16.0),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text('Reason for assistance',
+                              style: TextStyle(
+                                  fontSize: 18, fontWeight: FontWeight.w500)),
+                          DropdownButtonFormField<String>(
+                            dropdownColor:
+                                Theme.of(context).colorScheme.surface,
+                            borderRadius: BorderRadius.circular(30),
+                            value: _formState.reason.isEmpty
+                                ? 'I am elderly'
+                                : _formState.reason,
+                            decoration: InputDecoration(
+                              border: const OutlineInputBorder(),
+                              errorText: (_formState.submitted ||
+                                          _formState.reasonTouched) &&
+                                      !_formState.isReasonValid()
+                                  ? 'Reason is required'
+                                  : null,
+                            ),
+                            items: const [
+                              DropdownMenuItem(
+                                  value: 'I am elderly',
+                                  child: Text('I am elderly')),
+                              DropdownMenuItem(
+                                  value:
+                                      'I am a single parent flying with kids',
+                                  child: Text(
+                                      'I am a single parent flying with kids')),
+                              DropdownMenuItem(
+                                  value: 'I need company',
+                                  child: Text('I need company')),
+                              DropdownMenuItem(
+                                  value: 'Other', child: Text('Other')),
+                            ],
+                            onChanged: (value) {
+                              setState(() {
+                                _formState.updateReason(value ?? '');
+                              });
+                            },
+                          ),
+                          if (_formState.reason == 'Other')
+                            Padding(
+                              padding: const EdgeInsets.only(top: 8.0),
+                              child: TextFormField(
+                                initialValue: _formState.otherReason,
+                                maxLines: 3,
+                                decoration: const InputDecoration(
+                                  hintText:
+                                      'Please provide a short description',
+                                  border: OutlineInputBorder(),
+                                ),
+                                onChanged: (value) {
+                                  _formState.updateOtherReason(value);
+                                },
+                              ),
+                            ),
+                          const SizedBox(height: 50),
+                          const Text('Number of people in your party',
+                              style: TextStyle(
+                                  fontSize: 18, fontWeight: FontWeight.w500)),
+                          TextFormField(
+                            initialValue: _formState.partySize.toString(),
+                            keyboardType: TextInputType.number,
+                            decoration: const InputDecoration(
+                              hintText: 'Enter the number of people',
+                              border: OutlineInputBorder(),
+                            ),
+                            onChanged: (value) {
+                              _formState
+                                  .updatePartySize(int.tryParse(value) ?? 1);
+                            },
+                          ),
+                          const SizedBox(height: 50),
+                          const Text(
+                            'Enter a phone number',
+                            style: TextStyle(
+                                fontSize: 18, fontWeight: FontWeight.w500),
+                          ),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: TextFormField(
+                                  initialValue: _phone,
+                                  decoration: InputDecoration(
+                                    labelText: 'Phone Number',
+                                    prefixIcon: _country != null
+                                        ? GestureDetector(
+                                            onTap: () {
+                                              showCountryPicker(
+                                                context: context,
+                                                onSelect: (Country country) {
+                                                  setState(() {
+                                                    _country = country;
+                                                  });
+                                                },
+                                                favorite: ['US', 'IN'],
+                                              );
+                                            },
+                                            child: Container(
+                                              height: 56,
+                                              width: 70,
+                                              alignment: Alignment.center,
+                                              child: Text(
+                                                '${_country?.flagEmoji ?? ''} +${_country?.phoneCode ?? ''}',
+                                                style: TextStyle(
+                                                  fontSize: 16,
+                                                  color: Theme.of(context)
+                                                      .colorScheme
+                                                      .onSurface,
+                                                  fontWeight: FontWeight.bold,
+                                                ),
+                                              ),
+                                            ),
+                                          )
+                                        : null,
+                                  ),
+                                  keyboardType: TextInputType.phone,
+                                  validator: (value) {
+                                    if (value!.isEmpty) {
+                                      return 'Please enter a phone number';
+                                    } else if (!RegExp(
+                                            r'^\s*(?:\+?(\d{1,3}))?[-. (]*(\d{3})[-. )]*(\d{3})[-. ]*(\d{4})(?: *x(\d+))?\s*$')
+                                        .hasMatch(value)) {
+                                      return 'Please enter a valid phone number';
+                                    }
+                                    return null;
+                                  },
+                                  onChanged: (value) {
+                                    setState(() {
+                                      _phone = "+${_country!.phoneCode} $value";
+                                      _formState.updatePhoneNumber(_phone);
+                                    });
+                                  },
+                                ),
+                              ),
+                            ],
+                          ),
+                          SizedBox(height: 50),
+                          Padding(
+                            padding:
+                                const EdgeInsets.symmetric(horizontal: 16.0),
+                            child: RichText(
+                              textAlign: TextAlign.center,
+                              text: TextSpan(
+                                style: TextStyle(
+                                    color: Theme.of(context)
+                                        .colorScheme
+                                        .onSurface),
+                                children: [
+                                  const TextSpan(
+                                    text: 'By submitting, you agree to our ',
+                                  ),
+                                  TextSpan(
+                                    text: 'Terms of Service',
+                                    style: const TextStyle(
+                                      color: Colors.blue,
+                                      decoration: TextDecoration.underline,
+                                    ),
+                                    recognizer: TapGestureRecognizer()
+                                      ..onTap = () {
+                                        Navigator.push(
+                                          context,
+                                          MaterialPageRoute(
+                                              builder: (context) =>
+                                                  const TermsAndConditionsScreen()),
+                                        );
+                                      },
+                                  ),
+                                  const TextSpan(text: ' and '),
+                                  TextSpan(
+                                    text: 'Privacy Policy',
+                                    style: const TextStyle(
+                                      color: Colors.blue,
+                                      decoration: TextDecoration.underline,
+                                    ),
+                                    recognizer: TapGestureRecognizer()
+                                      ..onTap = () {
+                                        Navigator.push(
+                                          context,
+                                          MaterialPageRoute(
+                                              builder: (context) =>
+                                                  const PrivacyPolicyScreen()),
+                                        );
+                                      },
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                          SizedBox(
+                            height: 10,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
-          ),
-          _buildPageIndicator(),
-          _buildNavigationButtons(),
-        ],
+            _buildPageIndicator(),
+            _buildNavigationButtons(),
+          ],
+        ),
       ),
     );
   }
@@ -367,8 +382,7 @@ class _RecieverFormScreenState extends State<RecieverFormScreen> {
             )
           else
             ElevatedButton(
-              onPressed:
-                  _agreeTerms && _formState.emailConfirmed ? _submitForm : null,
+              onPressed: _submitForm,
               child: const Text('Submit'),
             ),
         ],
