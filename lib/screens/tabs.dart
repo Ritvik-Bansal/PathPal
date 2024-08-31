@@ -112,7 +112,6 @@ class _TabsState extends State<Tabs> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Theme.of(context).colorScheme.surface,
       appBar: _selectedIndex == 2
           ? AppBar(
               title: Text(
@@ -124,6 +123,7 @@ class _TabsState extends State<Tabs> {
                 ),
               ),
               centerTitle: true,
+              backgroundColor: Theme.of(context).colorScheme.primaryContainer,
               elevation: 0,
             )
           : null,
