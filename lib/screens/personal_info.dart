@@ -170,6 +170,7 @@ class _PersonalInfoScreenState extends State<PersonalInfoScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Theme.of(context).colorScheme.surface,
       appBar: AppBar(
         title: const Text(
           "PROFILE INFORMATION",
@@ -178,7 +179,6 @@ class _PersonalInfoScreenState extends State<PersonalInfoScreen> {
           ),
         ),
         centerTitle: true,
-        backgroundColor: Theme.of(context).colorScheme.onSecondary,
       ),
       body: user != null
           ? Container(
