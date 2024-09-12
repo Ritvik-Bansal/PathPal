@@ -19,7 +19,7 @@ class ContactUsContent extends StatelessWidget {
   Future<void> _launchEmail() async {
     final Uri emailLaunchUri = Uri(
       scheme: 'mailto',
-      path: 'ritvikbansal08@gmail.com',
+      path: 'info@pathpal.org',
     );
     if (await canLaunchUrl(emailLaunchUri)) {
       await launchUrl(emailLaunchUri);

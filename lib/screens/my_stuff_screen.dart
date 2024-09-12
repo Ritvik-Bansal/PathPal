@@ -30,7 +30,14 @@ class _MyStuffScreenState extends State<MyStuffScreen> {
 
   Future<void> _initializeAirlineFetcher() async {
     await _airlineFetcher.loadAirlines();
-    setState(() {});
+    if (mounted) {
+      setState(() {});
+    }
+  }
+
+  @override
+  void dispose() {
+    super.dispose();
   }
 
   @override
@@ -44,59 +51,153 @@ class _MyStuffScreenState extends State<MyStuffScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _buildContributorForms(),
-            _buildFavoritedContributors(),
+            FutureBuilder<List<Widget>>(
+              future: Future.wait([
+                _buildContributorForms(),
+                _buildFavoritedContributors(),
+                _buildTentativeRequests(),
+              ]),
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return Center(child: CircularProgressIndicator());
+                }
+                if (snapshot.hasError) {
+                  return Center(child: Text('Error: ${snapshot.error}'));
+                }
+                List<Widget> widgets = snapshot.data ?? [];
+
+                widgets.removeWhere(
+                    (widget) => widget is SizedBox && widget.height == 0);
+
+                if (widgets.isEmpty) {
+                  return Center(
+                    child: Padding(
+                      padding: const EdgeInsets.all(16.0),
+                      child: Text(
+                        'You have no volunteer forms, favorited trips, or tentative requests.',
+                        style: TextStyle(
+                            fontSize: 16, fontStyle: FontStyle.italic),
+                        textAlign: TextAlign.center,
+                      ),
+                    ),
+                  );
+                }
+                return Column(children: widgets);
+              },
+            ),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildContributorForms() {
-    return StreamBuilder<QuerySnapshot>(
-      stream: _firestore
-          .collection('contributors')
-          .where('userId', isEqualTo: _auth.currentUser?.uid)
-          .snapshots(),
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return Center(
-              child: CircularProgressIndicator(
-            backgroundColor: Theme.of(context).colorScheme.surface,
-          ));
-        }
+  Future<Widget> _buildContributorForms() async {
+    QuerySnapshot snapshot = await _firestore
+        .collection('contributors')
+        .where('userId', isEqualTo: _auth.currentUser?.uid)
+        .get();
 
-        if (snapshot.hasError) {
-          return Center(child: Text('Error: ${snapshot.error}'));
-        }
+    if (snapshot.docs.isEmpty) {
+      return SizedBox(height: 0);
+    }
 
-        if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-          return const SizedBox.shrink(); // Don't show anything if no forms
-        }
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Text('My Form Submissions',
+              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+        ),
+        ListView.builder(
+          shrinkWrap: true,
+          physics: NeverScrollableScrollPhysics(),
+          itemCount: snapshot.docs.length,
+          itemBuilder: (context, index) {
+            var doc = snapshot.docs[index];
+            var data = doc.data() as Map<String, dynamic>;
+            return ContributorFormCard(
+              data: data,
+              docId: doc.id,
+              onEdit: () => _editForm(doc.id, data),
+              onDelete: () => _deleteForm(doc.id),
+              airlineFetcher: _airlineFetcher,
+              firestoreService: _firestoreService,
+            );
+          },
+        ),
+      ],
+    );
+  }
 
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Text('My Form Submissions',
-                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+  Future<Widget> _buildTentativeRequests() async {
+    QuerySnapshot snapshot = await _firestore
+        .collection('tentativeReceivers')
+        .where('userId', isEqualTo: _auth.currentUser?.uid)
+        .get();
+
+    if (snapshot.docs.isEmpty) {
+      return SizedBox(height: 0);
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Text('My Tentative Requests',
+              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+        ),
+        ListView.builder(
+          shrinkWrap: true,
+          physics: NeverScrollableScrollPhysics(),
+          itemCount: snapshot.docs.length,
+          itemBuilder: (context, index) {
+            var doc = snapshot.docs[index];
+            var data = doc.data() as Map<String, dynamic>;
+            return TentativeRequestCard(
+              data: data,
+              docId: doc.id,
+              onDelete: () => _deleteTentativeRequest(doc.id),
+            );
+          },
+        ),
+      ],
+    );
+  }
+
+  void _deleteTentativeRequest(String docId) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          backgroundColor: Theme.of(context).colorScheme.surface,
+          title: const Text('Confirm Deletion'),
+          content: const Text(
+              'Are you sure you want to delete this tentative request?'),
+          actions: <Widget>[
+            TextButton(
+              child: const Text('Cancel'),
+              onPressed: () => Navigator.of(context).pop(),
             ),
-            ListView.builder(
-              shrinkWrap: true,
-              physics: NeverScrollableScrollPhysics(),
-              itemCount: snapshot.data!.docs.length,
-              itemBuilder: (context, index) {
-                var doc = snapshot.data!.docs[index];
-                var data = doc.data() as Map<String, dynamic>;
-                return ContributorFormCard(
-                  data: data,
-                  docId: doc.id,
-                  onEdit: () => _editForm(doc.id, data),
-                  onDelete: () => _deleteForm(doc.id),
-                  airlineFetcher: _airlineFetcher,
-                  firestoreService: _firestoreService,
-                );
+            TextButton(
+              child: const Text('Delete'),
+              onPressed: () async {
+                try {
+                  await _firestoreService.deleteTentativeRequest(docId);
+                  Navigator.of(context).pop();
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                        content:
+                            Text('Tentative request deleted successfully')),
+                  );
+                } catch (e) {
+                  print('Error deleting tentative request: $e');
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                        content: Text('Error deleting tentative request')),
+                  );
+                }
               },
             ),
           ],
@@ -105,93 +206,76 @@ class _MyStuffScreenState extends State<MyStuffScreen> {
     );
   }
 
-  Widget _buildFavoritedContributors() {
-    return StreamBuilder<DocumentSnapshot>(
-      stream: _firestore
-          .collection('users')
-          .doc(_auth.currentUser?.uid)
-          .snapshots(),
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return Center(
-              child: CircularProgressIndicator(
-            backgroundColor: Theme.of(context).colorScheme.surface,
-          ));
-        }
+  Future<Widget> _buildFavoritedContributors() async {
+    DocumentSnapshot userSnapshot =
+        await _firestore.collection('users').doc(_auth.currentUser?.uid).get();
 
-        if (snapshot.hasError) {
-          return Center(child: Text('Error: ${snapshot.error}'));
-        }
+    if (!userSnapshot.exists) {
+      return SizedBox(height: 0);
+    }
 
-        if (!snapshot.hasData || !snapshot.data!.exists) {
-          return const SizedBox.shrink();
-        }
+    var userData = userSnapshot.data() as Map<String, dynamic>?;
+    if (userData == null) {
+      return SizedBox(height: 0);
+    }
 
-        var userData = snapshot.data!.data() as Map<String, dynamic>?;
-        if (userData == null) {
-          return const SizedBox.shrink();
-        }
+    List<String> favoritedContributors =
+        List<String>.from(userData['favoritedContributors'] ?? []);
 
-        List<String> favoritedContributors =
-            List<String>.from(userData['favoritedContributors'] ?? []);
+    if (favoritedContributors.isEmpty) {
+      return SizedBox(height: 0);
+    }
 
-        if (favoritedContributors.isEmpty) {
-          return const SizedBox.shrink();
-        }
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Text(
+            'Favorited Trips',
+            style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+          ),
+        ),
+        ListView.builder(
+          shrinkWrap: true,
+          physics: NeverScrollableScrollPhysics(),
+          itemCount: favoritedContributors.length,
+          itemBuilder: (context, index) {
+            return FutureBuilder<DocumentSnapshot>(
+              future: _firestore
+                  .collection('contributors')
+                  .doc(favoritedContributors[index])
+                  .get(),
+              builder: (context, contributorSnapshot) {
+                if (contributorSnapshot.connectionState ==
+                    ConnectionState.waiting) {
+                  return const ListTile(title: Text('Loading...'));
+                }
 
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Text(
-                'Favorited Trips',
-                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-              ),
-            ),
-            ListView.builder(
-              shrinkWrap: true,
-              physics: NeverScrollableScrollPhysics(),
-              itemCount: favoritedContributors.length,
-              itemBuilder: (context, index) {
-                return FutureBuilder<DocumentSnapshot>(
-                  future: _firestore
-                      .collection('contributors')
-                      .doc(favoritedContributors[index])
-                      .get(),
-                  builder: (context, contributorSnapshot) {
-                    if (contributorSnapshot.connectionState ==
-                        ConnectionState.waiting) {
-                      return const ListTile(title: Text('Loading...'));
-                    }
+                if (contributorSnapshot.hasError ||
+                    !contributorSnapshot.hasData) {
+                  return const ListTile(title: Text('Error loading trip'));
+                }
 
-                    if (contributorSnapshot.hasError ||
-                        !contributorSnapshot.hasData) {
-                      return const ListTile(title: Text('Error loading trip'));
-                    }
+                var contributorData =
+                    contributorSnapshot.data!.data() as Map<String, dynamic>?;
+                if (contributorData == null) {
+                  return const ListTile(title: Text('Trip data not available'));
+                }
 
-                    var contributorData = contributorSnapshot.data!.data()
-                        as Map<String, dynamic>?;
-                    if (contributorData == null) {
-                      return const ListTile(
-                          title: Text('Trip data not available'));
-                    }
-
-                    return FavoritedContributorCard(
-                      contributorData: contributorData,
-                      onUnfavorite: () =>
-                          _unfavoriteContributor(favoritedContributors[index]),
-                      contributorId: favoritedContributors[index],
-                      airlineFetcher: _airlineFetcher,
-                      firestoreService: _firestoreService,
-                    );
-                  },
+                return FavoritedContributorCard(
+                  contributorData: contributorData,
+                  onUnfavorite: () =>
+                      _unfavoriteContributor(favoritedContributors[index]),
+                  contributorId: favoritedContributors[index],
+                  airlineFetcher: _airlineFetcher,
+                  firestoreService: _firestoreService,
                 );
               },
-            ),
-          ],
-        );
-      },
+            );
+          },
+        ),
+      ],
     );
   }
 
@@ -317,31 +401,31 @@ class ContributorFormCard extends StatelessWidget {
       flightRoute += ' via $via';
     }
 
-    return InkWell(
-      onTap: () {
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => ContributorDetailScreen(
-              contributorId: docId,
-              userId: data['userId'],
-              airlineFetcher: airlineFetcher,
-              firestoreService: firestoreService,
-            ),
-          ),
-        );
-      },
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 5),
-        margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
-        decoration: BoxDecoration(
-          border: Border.all(
-            color: const Color.fromARGB(255, 180, 221, 255),
-            width: 5,
-          ),
-          borderRadius: BorderRadius.circular(30),
-          color: Theme.of(context).colorScheme.surface,
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 15, horizontal: 5),
+      margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+      decoration: BoxDecoration(
+        border: Border.all(
+          color: const Color.fromARGB(255, 180, 221, 255),
+          width: 5,
         ),
+        borderRadius: BorderRadius.circular(30),
+        color: Theme.of(context).colorScheme.surface,
+      ),
+      child: InkWell(
+        onTap: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => ContributorDetailScreen(
+                contributorId: docId,
+                userId: data['userId'],
+                airlineFetcher: airlineFetcher,
+                firestoreService: firestoreService,
+              ),
+            ),
+          );
+        },
         child: Row(
           children: [
             const SizedBox(width: 5),
@@ -368,7 +452,7 @@ class ContributorFormCard extends StatelessWidget {
                 ],
               ),
             ),
-            Column(
+            Row(
               mainAxisSize: MainAxisSize.min,
               children: [
                 IconButton(
@@ -426,7 +510,7 @@ class FavoritedContributorCard extends StatelessWidget {
     String airlineName = _getAirlineName(flightNumber);
 
     return Container(
-      padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 10),
+      padding: const EdgeInsets.symmetric(vertical: 15, horizontal: 10),
       margin: const EdgeInsets.all(10),
       decoration: BoxDecoration(
         border: Border.all(
@@ -486,5 +570,73 @@ class FavoritedContributorCard extends StatelessWidget {
   String _getAirlineName(String flightNumber) {
     String iataCode = flightNumber.substring(0, 2).toUpperCase();
     return airlineFetcher.getAirlineName(iataCode) ?? 'Unknown Airline';
+  }
+}
+
+class TentativeRequestCard extends StatelessWidget {
+  final Map<String, dynamic> data;
+  final String docId;
+  final VoidCallback onDelete;
+
+  const TentativeRequestCard({
+    Key? key,
+    required this.data,
+    required this.docId,
+    required this.onDelete,
+  }) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    String from = data['startAirport']?['iata'] ?? 'Unknown';
+    String to = data['endAirport']?['iata'] ?? 'Unknown';
+    DateTime startDate = (data['startDate'] as Timestamp).toDate();
+    DateTime endDate = (data['endDate'] as Timestamp).toDate();
+
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 15, horizontal: 5),
+      margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+      decoration: BoxDecoration(
+        border: Border.all(
+          color: const Color.fromARGB(255, 180, 221, 255),
+          width: 5,
+        ),
+        borderRadius: BorderRadius.circular(30),
+        color: Theme.of(context).colorScheme.surface,
+      ),
+      child: Row(
+        children: [
+          const SizedBox(width: 5),
+          const CircleAvatar(
+            backgroundColor: Color.fromARGB(255, 180, 221, 255),
+            child: Icon(Icons.flight),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  '$from to $to',
+                  style: const TextStyle(
+                      fontWeight: FontWeight.bold, fontSize: 18),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  '${DateFormat("MMM d, yyyy").format(startDate)} - ${DateFormat("MMM d, yyyy").format(endDate)}',
+                  style: const TextStyle(fontSize: 16),
+                ),
+              ],
+            ),
+          ),
+          IconButton(
+            icon: const Icon(
+              Icons.delete,
+              color: Colors.red,
+            ),
+            onPressed: onDelete,
+          ),
+        ],
+      ),
+    );
   }
 }

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:pathpal/receiver/receiver_form_state.dart';
 
 class DateSelectionPage extends StatelessWidget {
@@ -64,7 +65,10 @@ class DateSelectionPage extends StatelessWidget {
     );
 
     if (picked != null) {
-      final dateRange = '${picked.start.toLocal()} - ${picked.end.toLocal()}';
+      final DateFormat formatter = DateFormat('yyyy-MM-dd');
+      final String formattedStartDate = formatter.format(picked.start);
+      final String formattedEndDate = formatter.format(picked.end);
+      final dateRange = '$formattedStartDate - $formattedEndDate';
       onDateRangeSelected(dateRange);
     }
   }

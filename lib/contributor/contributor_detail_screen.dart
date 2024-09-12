@@ -156,9 +156,6 @@ class _ContributorDetailScreenState extends State<ContributorDetailScreen> {
             _buildFlightRoute(contributorData),
             const SizedBox(height: 10),
             _buildMapWidget(contributorData),
-            // const SizedBox(height: 20),
-            // _buildSectionTitle('Details'),
-            // _buildDetailsContainer(contributorData, leg1, leg2),
             const SizedBox(height: 10),
             OutlinedButton(
               onPressed: () => _showContactConfirmationDialog(
@@ -216,7 +213,10 @@ class _ContributorDetailScreenState extends State<ContributorDetailScreen> {
                   padding: const EdgeInsets.all(20),
                 ),
                 interactionOptions: const InteractionOptions(
-                  flags: InteractiveFlag.all & ~InteractiveFlag.rotate,
+                  flags: InteractiveFlag.pinchZoom |
+                      InteractiveFlag.pinchMove |
+                      InteractiveFlag.doubleTapZoom,
+                  enableMultiFingerGestureRace: true,
                 ),
               ),
               children: [
@@ -331,7 +331,8 @@ class _ContributorDetailScreenState extends State<ContributorDetailScreen> {
           backgroundColor: Theme.of(context).colorScheme.surface,
           title: const Text('Contact Confirmation'),
           content: const Text(
-              'An email will be sent from PathPal to the contributor. You will have to wait until the contributor reaches out to you. Further communication is solely up to the contributor. Your email, phone number, and travel details will be shared with the contributor to facilitate communication. This process cannot be undone. Do you want to proceed?'),
+            'PathPal will email the contributor with your contact info and travel details. They will directly reach out to you. Do you wish to proceed?',
+          ),
           actions: <Widget>[
             TextButton(
               child: const Text('Cancel'),
@@ -360,7 +361,6 @@ class _ContributorDetailScreenState extends State<ContributorDetailScreen> {
 
     if (currentUser == null) {
       ScaffoldMessenger.of(context).clearSnackBars();
-
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Error: User not logged in')),
       );
@@ -368,6 +368,23 @@ class _ContributorDetailScreenState extends State<ContributorDetailScreen> {
     }
 
     try {
+      final String contributorUserId = contributorData['userId'];
+
+      final userSnapshot = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(contributorUserId)
+          .get();
+
+      if (!userSnapshot.exists) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Error: Contributor data not found')),
+        );
+        return;
+      }
+
+      final contributorName =
+          userSnapshot.data()?['name'] ?? 'PathPal Contributor';
+
       final receiverSnapshot = await FirebaseFirestore.instance
           .collection('receivers')
           .where('userId', isEqualTo: currentUser.uid)
@@ -375,7 +392,8 @@ class _ContributorDetailScreenState extends State<ContributorDetailScreen> {
 
       if (receiverSnapshot.docs.isEmpty) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Error: Receiver data not found')),
+          const SnackBar(
+              content: Text('Error: You may not be a registered Receiver')),
         );
         return;
       }
@@ -385,14 +403,60 @@ class _ContributorDetailScreenState extends State<ContributorDetailScreen> {
           ? receiverData['otherReason']
           : receiverData['reason'];
 
-      final emailContent =
-          'A traveler has expressed interest in connecting with you for travel assistance on your flight from ${contributorData['departureAirport']['iata']} to ${contributorData['arrivalAirport']['iata']}. Here are their details:\n\n'
-          'Name: ${receiverData['userName']}\n'
-          'Email: ${receiverData['userEmail']}\n'
-          'Phone: ${receiverData['userPhone']}\n'
-          'Reason for Assistance: ${reason}\n'
-          'Party Size: ${receiverData['partySize']}\n\n'
-          'Please reach out to the traveler if you are willing to assist them during their journey.';
+      final emailContent = '''
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>A Traveler Wants to Connect with You</title>
+</head>
+<body style="margin:0; padding:0; background-color:#f7f9fc; font-family: Arial, sans-serif; color:#333;">
+  <div style="max-width:600px; margin:20px auto; background-color:#ffffff; border-radius:8px; box-shadow:0 2px 4px rgba(0, 0, 0, 0.1); overflow:hidden;">
+    <div style="background-color:#0073e6; color:#ffffff; padding:20px; text-align:center;">
+      <h1 style="margin:0; font-size:28px;">A Traveler Wants to Connect with You</h1>
+    </div>
+    <div style="padding:20px;">
+      <p style="font-size:16px; line-height:1.5;">
+        Hi <strong>${contributorName}</strong>,
+      </p>
+      <p style="font-size:16px; line-height:1.5;">
+        A traveler has expressed interest in connecting with you for travel assistance on your flight from ${contributorData['departureAirport']['iata']} to ${contributorData['arrivalAirport']['iata']}.
+      </p>
+      <div style="background-color:#f1f4f8; padding:15px; border-radius:5px; margin:20px 0;">
+        <h2 style="font-size:20px; color:#0073e6; margin-top:0;">Traveler's Details:</h2>
+        <p style="font-size:16px; line-height:1.5; margin:5px 0;">
+          <strong>Name:</strong> ${receiverData['userName']}<br>
+          <strong>Email:</strong> ${receiverData['userEmail']}<br>
+          <strong>Phone:</strong> ${receiverData['userPhone']}<br>
+          <strong>Reason for Assistance:</strong> ${reason}<br>
+          <strong>Party Size:</strong> ${receiverData['partySize']}
+        </p>
+      </div>
+      <p style="font-size:16px; line-height:1.5;">
+        Please reach out to the traveler if you are willing to assist them during their journey. Your help can make a big difference in their travel experience.
+      </p>
+      <p style="font-size:16px; line-height:1.5;">
+        Thank you for being a part of the PathPal community. Together, we're making travel smoother and more enjoyable for everyone! 🌟
+      </p>
+      <p style="font-size:16px; line-height:1.5;">
+        Safe travels,<br>
+        <strong>The PathPal Team</strong>
+      </p>
+    </div>
+    <div style="background-color:#f7f9fc; text-align:center; padding:15px;">
+      <p style="font-size:14px; color:#555; margin:5px 0;">
+        <a href="https://pathpal.org" style="color:#0073e6; text-decoration:none;">Visit our website</a> | 
+        <a href="mailto:info@pathpal.org" style="color:#0073e6; text-decoration:none;">Contact Support</a>
+      </p>
+      <p style="font-size:12px; color:#999; margin:5px 0;">
+        © ${DateTime.now().year} PathPal. All rights reserved.
+      </p>
+    </div>
+  </div>
+</body>
+</html>
+''';
 
       final response = await http.post(
         Uri.parse('https://api.mailjet.com/v3.1/send'),
@@ -404,19 +468,18 @@ class _ContributorDetailScreenState extends State<ContributorDetailScreen> {
         body: json.encode({
           'Messages': [
             {
-              'From': {'Email': 'path2pal@gmail.com', 'Name': 'PathPal'},
+              'From': {'Email': 'noreply@pathpal.org', 'Name': 'PathPal'},
               'To': [
-                {
-                  'Email': contributorData['userEmail'],
-                  'Name': contributorData['name'] ?? 'Contributor'
-                }
+                {'Email': contributorData['userEmail'], 'Name': contributorName}
               ],
               'Subject': 'PathPal: A Traveler Wants to Connect',
-              'TextPart': emailContent,
+              'HTMLPart': emailContent,
+              'CustomID': 'PathPalConnectEmail'
             }
           ]
         }),
       );
+
       if (response.statusCode == 200) {
         await _firestoreService.addContactedContributor(widget.contributorId);
         setState(() {
@@ -438,78 +501,8 @@ class _ContributorDetailScreenState extends State<ContributorDetailScreen> {
     }
   }
 
-  // Widget _buildSectionTitle(String title) {
-  //   return Text(
-  //     title,
-  //     style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-  //     textAlign: TextAlign.center,
-  //   );
-  // }
-
-  // Widget _buildDetailsContainer(
-  //     Map<String, dynamic> contributorData, String? leg1, String? leg2) {
-  //   return Padding(
-  //     padding: const EdgeInsets.symmetric(horizontal: 16),
-  //     child: Container(
-  //       margin: const EdgeInsets.all(10),
-  //       padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 25),
-  //       decoration: BoxDecoration(
-  //         border: Border.all(width: 3),
-  //         borderRadius: BorderRadius.circular(30),
-  //       ),
-  //       child: Padding(
-  //         padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 8),
-  //         child: Column(
-  //           crossAxisAlignment: CrossAxisAlignment.start,
-  //           children: [
-  //             _buildDetailRow('Flight Date',
-  //                 _formatDate(contributorData['flightDateTime'] as Timestamp)),
-  //             _buildDetailRow('Flight Time',
-  //                 _formatTime(contributorData['flightDateTime'] as Timestamp)),
-  //             _buildDetailRow(
-  //                 'Leg 1 Flight #', leg1 != null ? leg1.toUpperCase() : 'N/A'),
-  //             _buildDetailRow(
-  //                 'Leg 2 Flight #', leg2 != null ? leg2.toUpperCase() : 'N/A',
-  //                 showIfEmpty: true),
-  //             _buildDetailRow('Airline',
-  //                 _getAirlineName(contributorData['flightNumberFirstLeg'])),
-  //             const SizedBox(height: 10),
-  //             _buildDetailRow('Start location',
-  //                 _getAirportInfo(contributorData['departureAirport'])),
-  //             _buildDetailRow('End Location',
-  //                 _getAirportInfo(contributorData['arrivalAirport'])),
-  //             _buildDetailRow('Layover Location',
-  //                 _getAirportInfo(contributorData['layoverAirport']),
-  //                 showIfEmpty: true),
-  //           ],
-  //         ),
-  //       ),
-  //     ),
-  //   );
-  // }
-
-  // Widget _buildDetailRow(String label, String value,
-  //     {bool showIfEmpty = false}) {
-  //   if (!showIfEmpty && (value.isEmpty || value == 'N/A')) {
-  //     return const SizedBox.shrink();
-  //   }
-  //   return Padding(
-  //     padding: const EdgeInsets.symmetric(vertical: 4),
-  //     child: Row(
-  //       crossAxisAlignment: CrossAxisAlignment.start,
-  //       children: [
-  //         SizedBox(
-  //             width: 140,
-  //             child: Text(label,
-  //                 style: const TextStyle(fontWeight: FontWeight.bold))),
-  //         Expanded(child: Text(value)),
-  //       ],
-  //     ),
-  //   );
-  // }
-
   String _formatDate(Timestamp timestamp) {
-    return DateFormat('MMMM d, yyyy').format(timestamp.toDate());
+    return DateFormat('MMM d, yyyy').format(timestamp.toDate());
   }
 
   String _formatTime(Timestamp timestamp) {
@@ -518,7 +511,8 @@ class _ContributorDetailScreenState extends State<ContributorDetailScreen> {
 
   String _getAirlineName(String flightNumber) {
     String iataCode = flightNumber.substring(0, 2).toUpperCase();
-    return widget.airlineFetcher.getAirlineName(iataCode) ?? 'Unknown Airline';
+    return widget.airlineFetcher.getAirlineName(iataCode) ??
+        'Airline $iataCode';
   }
 
   String _getAirportInfo(Map<String, dynamic>? airport) {
@@ -541,7 +535,6 @@ class _ContributorDetailScreenState extends State<ContributorDetailScreen> {
 
     return Column(
       children: [
-        const SizedBox(height: 20),
         const Text(
           'Flight Route and Details',
           style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
@@ -584,6 +577,10 @@ class _ContributorDetailScreenState extends State<ContributorDetailScreen> {
   Widget _buildFlightLeg(String from, String to, String airline,
       String flightNumber, String date, String time,
       {required bool isFirstLeg, String? layoverInfo}) {
+    String airlineIataCode = flightNumber.substring(0, 2).toUpperCase();
+    String airlineLogoUrl =
+        'https://airlabs.co/img/airline/m/$airlineIataCode.png';
+
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 10),
       margin: const EdgeInsets.all(10),
@@ -596,34 +593,44 @@ class _ContributorDetailScreenState extends State<ContributorDetailScreen> {
         children: [
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
                 from,
                 style:
-                    const TextStyle(fontWeight: FontWeight.bold, fontSize: 30),
+                    const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
               ),
-              Column(
-                children: [
-                  Transform.rotate(
-                    angle: 90 * 3.14159 / 180,
-                    child: const Icon(
-                      Icons.flight_outlined,
-                      size: 30,
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-                  Text(
-                    airline,
-                    style: const TextStyle(
-                        fontStyle: FontStyle.italic, fontSize: 17),
-                  ),
-                ],
+              Transform.rotate(
+                angle: 90 * 3.14159 / 180,
+                child: const Icon(
+                  Icons.flight_outlined,
+                  size: 30,
+                ),
               ),
               Text(
                 to,
                 style:
-                    const TextStyle(fontWeight: FontWeight.bold, fontSize: 30),
+                    const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Image.network(
+                airlineLogoUrl,
+                width: 24,
+                height: 24,
+                errorBuilder: (context, error, stackTrace) =>
+                    const SizedBox(width: 24, height: 24),
+              ),
+              const SizedBox(width: 8),
+              Flexible(
+                child: Text(
+                  '$airline (${flightNumber.toUpperCase()})',
+                  style: const TextStyle(fontSize: 18),
+                  overflow: TextOverflow.ellipsis,
+                ),
               ),
             ],
           ),
@@ -636,10 +643,6 @@ class _ContributorDetailScreenState extends State<ContributorDetailScreen> {
                   'Layover: $layoverInfo',
                   style: const TextStyle(fontSize: 16),
                 ),
-              Text(
-                'Flight: ${flightNumber.toUpperCase()}',
-                style: const TextStyle(fontSize: 16),
-              ),
               if (isFirstLeg) ...[
                 Text(
                   'Date: $date',

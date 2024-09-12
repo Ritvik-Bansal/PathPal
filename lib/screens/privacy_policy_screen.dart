@@ -64,7 +64,7 @@ class PrivacyPolicyScreen extends StatelessWidget {
             _buildSection(
               title: '5. Your Rights',
               subsections: [
-                'You have the right to access, correct, or delete your personal information. You can also object to or restrict certain types of processing. If you wish to exercise these rights, please contact us at path2pal@gmail.com.',
+                'You have the right to access, correct, or delete your personal information. You can also object to or restrict certain types of processing. If you wish to exercise these rights, please contact us at info@pathpal.org.',
               ],
             ),
             _buildSection(
@@ -76,7 +76,7 @@ class PrivacyPolicyScreen extends StatelessWidget {
             _buildSection(
               title: '7. Contact Us',
               subsections: [
-                'If you have any questions about this Privacy Policy, please contact us at path2pal@gmail.com.',
+                'If you have any questions about this Privacy Policy, please contact us at info@pathpal.org.',
               ],
             ),
             _buildSection(title: '8. Attributions', subsections: [

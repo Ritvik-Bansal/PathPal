@@ -1,12 +1,9 @@
 import 'dart:convert';
 
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:pathpal/models/airport_model.dart';
-import 'package:pathpal/screens/privacy_policy_screen.dart';
-import 'package:pathpal/screens/terms_conditions_screen.dart';
 import 'package:pathpal/services/firestore_service.dart';
 import 'package:pathpal/contributor/contributor_form_state.dart';
 import 'package:pathpal/contributor/flight_info_page.dart';
@@ -24,7 +21,6 @@ class ContributorFormScreen extends StatefulWidget {
 class _ContributorFormScreenState extends State<ContributorFormScreen> {
   late ContributorFormState _formState;
   final FirestoreService _firestoreService = FirestoreService();
-
   late TextEditingController _flightNumberController;
   late TextEditingController _flightNumberFirstLegController;
   late TextEditingController _flightNumberSecondLegController;
@@ -96,6 +92,15 @@ class _ContributorFormScreenState extends State<ContributorFormScreen> {
     }
 
     try {
+      final userEmail = await _firestoreService.getUserEmail();
+      if (userEmail == null) {
+        ScaffoldMessenger.of(context).clearSnackBars();
+        ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Error: Could not fetch email')));
+        return;
+      }
+      _formState.email = userEmail;
+
       if (widget.contributorId != null) {
         await _firestoreService.updateContributorForm(
             widget.contributorId!, _formState);
@@ -134,16 +139,59 @@ class _ContributorFormScreenState extends State<ContributorFormScreen> {
         return;
       }
 
-      final emailContent = 'Thank you for your contribution to PathPal! '
-          'Your flight information has been successfully submitted. '
-          'Your assistance will help make travel easier for others. '
-          'Here\'s a summary of your submitted information:\n\n'
-          'Flight Number: ${_formState.flightNumber}\n'
-          'Departure: ${_formState.departureAirport?.city}, ${_formState.departureAirport?.country}\n'
-          'Arrival: ${_formState.arrivalAirport?.city}, ${_formState.arrivalAirport?.country}\n'
-          'Date: ${_formState.flightDateTime?.toLocal().toString().split(' ')[0]}\n\n'
-          'If you need to make any changes, please edit your form in the my trips section. '
-          'Thank you for being a PathPal contributor!';
+      final emailContent = '''
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Thank You for Your Contribution</title>
+</head>
+<body style="margin:0; padding:0; background-color:#f7f9fc; font-family: Arial, sans-serif; color:#333;">
+  <div style="max-width:600px; margin:20px auto; background-color:#ffffff; border-radius:8px; box-shadow:0 2px 4px rgba(0, 0, 0, 0.1); overflow:hidden;">
+    <div style="background-color:#0073e6; color:#ffffff; padding:20px; text-align:center;">
+      <h1 style="margin:0; font-size:28px;">Thank You for your contribution!</h1>
+    </div>
+    <div style="padding:20px;">
+      <p style="font-size:16px; line-height:1.5;">
+        Hi <strong>${user.displayName ?? 'PathPal Contributor'}</strong>,
+      </p>
+      <p style="font-size:16px; line-height:1.5;">
+        Your flight details have been successfully submitted! ✈️
+      </p>
+      <div style="background-color:#f1f4f8; padding:15px; border-radius:5px; margin:20px 0;">
+        <h2 style="font-size:20px; color:#0073e6; margin-top:0;">Here are your trip details:</h2>
+        <p style="font-size:16px; line-height:1.5; margin:5px 0;">
+          <strong>Flight Number:</strong> ${_formState.flightNumber}<br>
+          <strong>Departure:</strong> ${_formState.departureAirport?.city}, ${_formState.departureAirport?.country}<br>
+          <strong>Arrival:</strong> ${_formState.arrivalAirport?.city}, ${_formState.arrivalAirport?.country}<br>
+          <strong>Date:</strong> ${_formState.flightDateTime?.toLocal().toString().split(' ')[0]}
+        </p>
+      </div>
+      <p style="font-size:16px; line-height:1.5;">
+        If you need to make any changes, feel free to update your info in the <strong>"My Trips"</strong> section of our app.
+      </p>
+      <p style="font-size:16px; line-height:1.5;">
+        Thanks a million for being part of the PathPal family. Together, we're making travel smoother and more enjoyable for everyone! 🌟
+      </p>
+      <p style="font-size:16px; line-height:1.5;">
+        Safe travels,<br>
+        <strong>The PathPal Team</strong>
+      </p>
+    </div>
+    <div style="background-color:#f7f9fc; text-align:center; padding:15px;">
+      <p style="font-size:14px; color:#555; margin:5px 0;">
+        <a href="https://pathpal.org" style="color:#0073e6; text-decoration:none;">Visit our website</a> | 
+        <a href="mailto:info@pathpal.org" style="color:#0073e6; text-decoration:none;">Contact Support</a>
+      </p>
+      <p style="font-size:12px; color:#999; margin:5px 0;">
+        © ${DateTime.now().year} PathPal. All rights reserved.
+      </p>
+    </div>
+  </div>
+</body>
+</html>
+''';
 
       final response = await http.post(
         Uri.parse('https://api.mailjet.com/v3.1/send'),
@@ -155,12 +203,13 @@ class _ContributorFormScreenState extends State<ContributorFormScreen> {
         body: json.encode({
           'Messages': [
             {
-              'From': {'Email': 'path2pal@gmail.com', 'Name': 'PathPal'},
+              'From': {'Email': 'noreply@pathpal.org', 'Name': 'PathPal'},
               'To': [
                 {'Email': userEmail, 'Name': user.displayName ?? 'Contributor'}
               ],
-              'Subject': 'Thank You for Your PathPal Contribution',
-              'TextPart': emailContent,
+              'Subject': 'Thank You for Your PathPal Contribution!',
+              'HTMLPart': emailContent,
+              'CustomID': 'PathPalContributionEmail'
             }
           ]
         }),
@@ -249,64 +298,12 @@ class _ContributorFormScreenState extends State<ContributorFormScreen> {
             ),
           ),
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16.0),
-            child: RichText(
-              textAlign: TextAlign.center,
-              text: TextSpan(
-                style:
-                    TextStyle(color: Theme.of(context).colorScheme.onSurface),
-                children: [
-                  const TextSpan(
-                    text: 'By submitting, you agree to our ',
-                  ),
-                  TextSpan(
-                    text: 'Terms of Service',
-                    style: const TextStyle(
-                      color: Colors.blue,
-                      decoration: TextDecoration.underline,
-                    ),
-                    recognizer: TapGestureRecognizer()
-                      ..onTap = () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                              builder: (context) =>
-                                  const TermsAndConditionsScreen()),
-                        );
-                      },
-                  ),
-                  const TextSpan(text: ' and '),
-                  TextSpan(
-                    text: 'Privacy Policy',
-                    style: const TextStyle(
-                      color: Colors.blue,
-                      decoration: TextDecoration.underline,
-                    ),
-                    recognizer: TapGestureRecognizer()
-                      ..onTap = () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                              builder: (context) =>
-                                  const PrivacyPolicyScreen()),
-                        );
-                      },
-                  ),
-                ],
-              ),
-            ),
-          ),
-          SizedBox(
-            height: 10,
-          ),
-          Padding(
             padding: const EdgeInsets.all(16.0),
             child: ElevatedButton(
               onPressed: _submitForm,
               child: const Text('Submit'),
             ),
           ),
-          SizedBox(height: 30)
         ],
       ),
     );

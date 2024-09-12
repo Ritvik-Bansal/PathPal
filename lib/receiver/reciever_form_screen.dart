@@ -1,13 +1,10 @@
 import 'dart:convert';
-import 'package:flutter/gestures.dart';
 import 'package:http/http.dart' as http;
 import 'package:flutter/material.dart';
 import 'package:pathpal/contributor/filtered_contributors_screen.dart';
 import 'package:pathpal/receiver/receiver_form_state.dart';
 import 'package:pathpal/receiver/date_selection_page.dart';
 import 'package:pathpal/receiver/airport_selection_page.dart';
-import 'package:pathpal/screens/privacy_policy_screen.dart';
-import 'package:pathpal/screens/terms_conditions_screen.dart';
 import 'package:pathpal/services/firestore_service.dart';
 import 'package:country_picker/country_picker.dart';
 
@@ -264,60 +261,6 @@ class _RecieverFormScreenState extends State<RecieverFormScreen> {
                             ],
                           ),
                           SizedBox(height: 50),
-                          Padding(
-                            padding:
-                                const EdgeInsets.symmetric(horizontal: 16.0),
-                            child: RichText(
-                              textAlign: TextAlign.center,
-                              text: TextSpan(
-                                style: TextStyle(
-                                    color: Theme.of(context)
-                                        .colorScheme
-                                        .onSurface),
-                                children: [
-                                  const TextSpan(
-                                    text: 'By submitting, you agree to our ',
-                                  ),
-                                  TextSpan(
-                                    text: 'Terms of Service',
-                                    style: const TextStyle(
-                                      color: Colors.blue,
-                                      decoration: TextDecoration.underline,
-                                    ),
-                                    recognizer: TapGestureRecognizer()
-                                      ..onTap = () {
-                                        Navigator.push(
-                                          context,
-                                          MaterialPageRoute(
-                                              builder: (context) =>
-                                                  const TermsAndConditionsScreen()),
-                                        );
-                                      },
-                                  ),
-                                  const TextSpan(text: ' and '),
-                                  TextSpan(
-                                    text: 'Privacy Policy',
-                                    style: const TextStyle(
-                                      color: Colors.blue,
-                                      decoration: TextDecoration.underline,
-                                    ),
-                                    recognizer: TapGestureRecognizer()
-                                      ..onTap = () {
-                                        Navigator.push(
-                                          context,
-                                          MaterialPageRoute(
-                                              builder: (context) =>
-                                                  const PrivacyPolicyScreen()),
-                                        );
-                                      },
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                          SizedBox(
-                            height: 10,
-                          ),
                         ],
                       ),
                     ),

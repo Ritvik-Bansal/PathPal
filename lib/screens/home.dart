@@ -5,7 +5,9 @@ import 'package:pathpal/contributor/contributor_form_screen.dart';
 import 'package:pathpal/receiver/reciever_form_screen.dart';
 
 class HomeScreen extends StatelessWidget {
-  const HomeScreen({super.key});
+  final Function onProfileTap;
+
+  const HomeScreen({super.key, required this.onProfileTap});
 
   @override
   Widget build(BuildContext context) {
@@ -32,20 +34,26 @@ class HomeScreen extends StatelessWidget {
               final userName = userData?['name'] ?? 'User';
               final profilePicUrl = userData?['profile_picture'];
 
-              return Row(
-                children: [
-                  Text(userName,
-                      style: const TextStyle(
-                          fontSize: 16, fontWeight: FontWeight.bold)),
-                  const SizedBox(width: 8),
-                  CircleAvatar(
-                    backgroundImage: profilePicUrl != null
-                        ? NetworkImage(profilePicUrl)
-                        : null,
-                    child:
-                        profilePicUrl == null ? const Icon(Icons.person) : null,
-                  ),
-                ],
+              return GestureDetector(
+                onTap: () {
+                  onProfileTap();
+                },
+                child: Row(
+                  children: [
+                    Text(userName,
+                        style: const TextStyle(
+                            fontSize: 16, fontWeight: FontWeight.bold)),
+                    const SizedBox(width: 8),
+                    CircleAvatar(
+                      backgroundImage: profilePicUrl != null
+                          ? NetworkImage(profilePicUrl)
+                          : null,
+                      child: profilePicUrl == null
+                          ? const Icon(Icons.person)
+                          : null,
+                    ),
+                  ],
+                ),
               );
             },
           ),
@@ -61,15 +69,31 @@ class HomeScreen extends StatelessWidget {
               children: [
                 const SizedBox(height: 60),
                 Image.asset('assets/icon/icon_removed_bg.png'),
-                const Text(
-                  'Hello, what are you looking for?',
-                  style: TextStyle(fontSize: 35, fontWeight: FontWeight.bold),
-                  textAlign: TextAlign.center,
+                StreamBuilder<DocumentSnapshot>(
+                  stream: FirebaseFirestore.instance
+                      .collection('users')
+                      .doc(FirebaseAuth.instance.currentUser!.uid)
+                      .snapshots(),
+                  builder: (context, snapshot) {
+                    if (!snapshot.hasData) {
+                      return const SizedBox();
+                    }
+                    final userData =
+                        snapshot.data!.data() as Map<String, dynamic>?;
+                    final userName = userData?['name'] ?? 'User';
+
+                    return Text(
+                      'Hello, ${userName.toString().substring(0, userName.toString().indexOf(' '))}.\nWelcome to PathPal.',
+                      style: const TextStyle(
+                          fontSize: 32, fontWeight: FontWeight.bold),
+                      textAlign: TextAlign.center,
+                    );
+                  },
                 ),
                 const SizedBox(height: 32),
                 ElevatedButton.icon(
                   label: Text(
-                    'I want to help',
+                    'Volunteer to assist travelers',
                     style: TextStyle(
                       fontSize: 18,
                       color: Theme.of(context).colorScheme.onPrimaryContainer,
@@ -102,7 +126,7 @@ class HomeScreen extends StatelessWidget {
                 const SizedBox(height: 16),
                 ElevatedButton.icon(
                   label: Text(
-                    'I need help',
+                    'Look for a travel companion',
                     style: TextStyle(
                       fontSize: 18,
                       color: Theme.of(context).colorScheme.onPrimaryContainer,

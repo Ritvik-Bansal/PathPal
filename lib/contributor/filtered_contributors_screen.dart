@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
+import 'package:pathpal/contributor/tentative_receiver_screen.dart';
 import 'package:pathpal/receiver/receiver_form_state.dart';
 import 'package:pathpal/services/firestore_service.dart';
 import 'contributor_detail_screen.dart';
@@ -40,98 +41,232 @@ class _FilteredContributorsScreenState
     }
   }
 
+  Future<bool> _hasExistingTentativeRequest() async {
+    final userEmail = await _firestoreService.getUserEmail();
+    if (userEmail == null) {
+      return false;
+    }
+
+    final querySnapshot = await FirebaseFirestore.instance
+        .collection('tentativeReceivers')
+        .where('userEmail', isEqualTo: userEmail)
+        .where('startAirport.iata',
+            isEqualTo:
+                widget.receiverFormState.startAirport!.iata.toUpperCase())
+        .where('endAirport.iata',
+            isEqualTo: widget.receiverFormState.endAirport!.iata.toUpperCase())
+        .get();
+
+    return querySnapshot.docs.isNotEmpty;
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Theme.of(context).colorScheme.surface,
-      appBar: AppBar(
-        title: Text(
-            'Flights from ${widget.receiverFormState.startAirport?.iata.toString() ?? 'Unknown'} to ${widget.receiverFormState.endAirport?.iata.toString() ?? 'Unknown'}'),
+    return DefaultTabController(
+      length: 2,
+      child: Scaffold(
+        backgroundColor: Theme.of(context).colorScheme.surface,
+        appBar: AppBar(
+          title: Text(
+              'Flights from ${widget.receiverFormState.startAirport?.iata.toString() ?? 'Unknown'} to ${widget.receiverFormState.endAirport?.iata.toString() ?? 'Unknown'}'),
+          bottom: TabBar(
+            tabs: [
+              Tab(text: 'Contributors'),
+              Tab(text: 'Tentative Receivers'),
+            ],
+          ),
+        ),
+        body: TabBarView(
+          children: [
+            _buildContributorsTab(),
+            TentativeReceiversScreen(
+                receiverFormState: widget.receiverFormState),
+          ],
+        ),
       ),
-      body: _isLoading
-          ? Center(
-              child: CircularProgressIndicator(
-              backgroundColor: Theme.of(context).colorScheme.surface,
-            ))
-          : StreamBuilder<QuerySnapshot>(
-              stream: _getFilteredContributorsStream(),
-              builder: (context, snapshot) {
-                if (snapshot.connectionState == ConnectionState.waiting) {
-                  return Center(
-                      child: CircularProgressIndicator(
-                    backgroundColor: Theme.of(context).colorScheme.surface,
-                  ));
-                }
-                if (snapshot.hasError) {
-                  print(snapshot.error);
-                  return Center(child: Text('Error: ${snapshot.error}'));
-                }
-                if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-                  return const Center(
-                      child: Text('No matching contributors found'));
-                }
-                return ListView.builder(
-                  itemCount: snapshot.data!.docs.length,
-                  itemBuilder: (context, index) {
-                    var contributor = snapshot.data!.docs[index];
-                    var contributorData =
-                        contributor.data() as Map<String, dynamic>;
-                    return FutureBuilder<DocumentSnapshot>(
-                      future: FirebaseFirestore.instance
-                          .collection('users')
-                          .doc(contributorData['userId'])
-                          .get(),
-                      builder: (context, userSnapshot) {
-                        if (userSnapshot.connectionState ==
-                            ConnectionState.waiting) {
-                          return const ListTile(title: Text('Loading...'));
-                        }
-                        if (userSnapshot.hasError) {
-                          return const ListTile(
-                              title: Text('Error loading user data'));
-                        }
-                        if (!userSnapshot.hasData) {
-                          return const ListTile(title: Text('User not found'));
-                        }
-                        var userData =
-                            userSnapshot.data!.data() as Map<String, dynamic>;
-                        return ContributorCard(
-                          layover: contributorData['layoverAirport']?['city'] ??
-                              'N/A',
-                          airline:
-                              contributorData['flightNumberFirstLeg'] ?? '',
-                          profilePicture: userData['profile_picture'] ?? '',
-                          flightDate:
-                              (contributorData['flightDateTime'] as Timestamp)
-                                  .toDate(),
-                          onTap: () {
-                            Navigator.push<bool>(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) => ContributorDetailScreen(
-                                  contributorId: contributor.id,
-                                  userId: contributorData['userId'],
-                                  airlineFetcher: _airlineFetcher,
-                                  firestoreService: _firestoreService,
+    );
+  }
+
+  Future<void> _addOrUpdateTentativeList() async {
+    final userEmail = await _firestoreService.getUserEmail();
+    if (userEmail == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Error: Could not fetch user details')));
+      return;
+    }
+    widget.receiverFormState.email = userEmail;
+
+    try {
+      bool hasExistingRequest = await _hasExistingTentativeRequest();
+      await _firestoreService
+          .addOrUpdateTentativeReceiver(widget.receiverFormState);
+      if (hasExistingRequest) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Tentative request updated successfully')),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Tentative request added successfully')),
+        );
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+            content: Text(
+                'Error adding/updating tentative request: ${e.toString()}')),
+      );
+      print('Error adding/updating tentative request: $e');
+    }
+  }
+
+  Widget _buildContributorsTab() {
+    return _isLoading
+        ? Center(
+            child: CircularProgressIndicator(
+                backgroundColor: Theme.of(context).colorScheme.surface))
+        : StreamBuilder<QuerySnapshot>(
+            stream: _getFilteredContributorsStream(),
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return Center(
+                    child: CircularProgressIndicator(
+                        backgroundColor:
+                            Theme.of(context).colorScheme.surface));
+              }
+              if (snapshot.hasError) {
+                print(snapshot.error);
+                return Center(child: Text('Error: ${snapshot.error}'));
+              }
+              if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+                return Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(
+                        'No matching contributors found',
+                        style: TextStyle(fontSize: 16),
+                      ),
+                      SizedBox(height: 40),
+                      FutureBuilder<bool>(
+                        future: _hasExistingTentativeRequest(),
+                        builder: (context, snapshot) {
+                          if (snapshot.connectionState ==
+                              ConnectionState.waiting) {
+                            return CircularProgressIndicator();
+                          }
+
+                          bool hasExistingRequest = snapshot.data ?? false;
+                          return Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              ElevatedButton(
+                                onPressed: _addOrUpdateTentativeList,
+                                child: Text(
+                                  hasExistingRequest
+                                      ? 'Update Tentative Request'
+                                      : 'Add Tentative Request',
                                 ),
                               ),
-                            ).then((favoriteChanged) {
-                              if (favoriteChanged == true) {
-                                setState(
-                                    () {}); // This will rebuild the widget tree
-                              }
-                            });
-                          },
-                          airlineFetcher: _airlineFetcher,
-                          contributorId: contributor.id,
-                          firestoreService: _firestoreService,
-                        );
-                      },
-                    );
-                  },
+                              SizedBox(width: 8),
+                              Tooltip(
+                                message:
+                                    'The Tentative List allows you to indicate interest in connecting with other people looking for help. You will also be notified if a match with a future volunteer is found',
+                                child: IconButton(
+                                  icon: Icon(Icons.info_outline),
+                                  onPressed: () {
+                                    _showTentativeListInfo(context);
+                                  },
+                                ),
+                              ),
+                            ],
+                          );
+                        },
+                      ),
+                    ],
+                  ),
                 );
+              }
+              return ListView.builder(
+                itemCount: snapshot.data!.docs.length,
+                itemBuilder: (context, index) {
+                  var contributor = snapshot.data!.docs[index];
+                  var contributorData =
+                      contributor.data() as Map<String, dynamic>;
+                  return FutureBuilder<DocumentSnapshot>(
+                    future: FirebaseFirestore.instance
+                        .collection('users')
+                        .doc(contributorData['userId'])
+                        .get(),
+                    builder: (context, userSnapshot) {
+                      if (userSnapshot.connectionState ==
+                          ConnectionState.waiting) {
+                        return const ListTile(title: Text('Loading...'));
+                      }
+                      if (userSnapshot.hasError) {
+                        return const ListTile(
+                            title: Text('Error loading user data'));
+                      }
+                      if (!userSnapshot.hasData) {
+                        return const ListTile(title: Text('User not found'));
+                      }
+                      var userData =
+                          userSnapshot.data!.data() as Map<String, dynamic>;
+                      return ContributorCard(
+                        layover:
+                            contributorData['layoverAirport']?['city'] ?? 'N/A',
+                        airline: contributorData['flightNumberFirstLeg'] ?? '',
+                        profilePicture: userData['profile_picture'] ?? '',
+                        flightDate:
+                            (contributorData['flightDateTime'] as Timestamp)
+                                .toDate(),
+                        onTap: () {
+                          Navigator.push<bool>(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => ContributorDetailScreen(
+                                contributorId: contributor.id,
+                                userId: contributorData['userId'],
+                                airlineFetcher: _airlineFetcher,
+                                firestoreService: _firestoreService,
+                              ),
+                            ),
+                          ).then((favoriteChanged) {
+                            if (favoriteChanged == true) {
+                              setState(() {});
+                            }
+                          });
+                        },
+                        airlineFetcher: _airlineFetcher,
+                        contributorId: contributor.id,
+                        firestoreService: _firestoreService,
+                      );
+                    },
+                  );
+                },
+              );
+            },
+          );
+  }
+
+  void _showTentativeListInfo(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text('Tentative List Information'),
+          content: Text(
+            'The Tentative List is a feature that allows you to express interest in connecting with other receivers (people who need help) because there are no current volunteer matching your criteria. By joining this list, you may also be notified if a potential match with a volunteer is found in the future. This increases your chances of finding a match.',
+          ),
+          actions: <Widget>[
+            TextButton(
+              child: Text('Got it'),
+              onPressed: () {
+                Navigator.of(context).pop();
               },
             ),
+          ],
+        );
+      },
     );
   }
 

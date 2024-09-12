@@ -102,9 +102,46 @@ class _AuthScreenState extends State<AuthScreen> {
     } on FirebaseAuthException catch (error) {
       if (mounted) {
         ScaffoldMessenger.of(context).clearSnackBars();
+        String errorMessage;
+        switch (error.code) {
+          case 'user-not-found':
+            errorMessage = 'No user found with this email address.';
+            break;
+          case 'wrong-password':
+            errorMessage = 'Incorrect password. Please try again.';
+            break;
+          case 'invalid-email':
+            errorMessage = 'The email address is not valid.';
+            break;
+          case 'user-disabled':
+            errorMessage = 'This user account has been disabled.';
+            break;
+          case 'too-many-requests':
+            errorMessage = 'Too many login attempts. Please try again later.';
+            break;
+          case 'operation-not-allowed':
+            errorMessage = 'Email and password sign-in is not enabled.';
+            break;
+          case 'email-already-in-use':
+            errorMessage = 'An account already exists with this email address.';
+            break;
+          case 'weak-password':
+            errorMessage = 'The password provided is too weak.';
+            break;
+          case 'email-not-verified':
+            errorMessage = 'Please verify your email before logging in.';
+            break;
+          case 'invalid-credential':
+            errorMessage =
+                'The credentials entered are invalid. Please enter valid credentials.';
+            break;
+          default:
+            errorMessage =
+                error.message ?? 'An error occurred, Please try again.';
+        }
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(error.message ?? 'Authentication failed'),
+            content: Text(errorMessage),
           ),
         );
       }
@@ -113,7 +150,7 @@ class _AuthScreenState extends State<AuthScreen> {
         ScaffoldMessenger.of(context).clearSnackBars();
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('An error occurred: $error'),
+            content: Text('An unexpected error occurred: $error'),
           ),
         );
       }

@@ -1,5 +1,8 @@
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:country_picker/country_picker.dart';
+import 'package:pathpal/screens/privacy_policy_screen.dart';
+import 'package:pathpal/screens/terms_conditions_screen.dart';
 // import 'package:pathpal/services/apple_auth_flow.dart';
 // import 'package:pathpal/widgets/login_tile.dart';
 // import 'package:pathpal/services/google_auth_flow.dart';
@@ -183,6 +186,60 @@ class _AuthFormState extends State<AuthForm> {
                   onSaved: (value) {
                     _enteredName = value!;
                   },
+                ),
+              if (!widget.isLogin)
+                Column(
+                  children: [
+                    SizedBox(height: 30),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                      child: RichText(
+                        textAlign: TextAlign.center,
+                        text: TextSpan(
+                          style: TextStyle(
+                              color: Theme.of(context).colorScheme.onSurface),
+                          children: [
+                            const TextSpan(
+                              text: 'I have read and accepted PathPal\'s ',
+                            ),
+                            TextSpan(
+                              text: 'Terms of Service',
+                              style: const TextStyle(
+                                color: Colors.blue,
+                                decoration: TextDecoration.underline,
+                              ),
+                              recognizer: TapGestureRecognizer()
+                                ..onTap = () {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                        builder: (context) =>
+                                            const TermsAndConditionsScreen()),
+                                  );
+                                },
+                            ),
+                            const TextSpan(text: ' and '),
+                            TextSpan(
+                              text: 'Privacy Policy',
+                              style: const TextStyle(
+                                color: Colors.blue,
+                                decoration: TextDecoration.underline,
+                              ),
+                              recognizer: TapGestureRecognizer()
+                                ..onTap = () {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                        builder: (context) =>
+                                            const PrivacyPolicyScreen()),
+                                  );
+                                },
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               const SizedBox(height: 20),
               if (widget.isAuthenticating)

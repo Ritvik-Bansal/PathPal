@@ -44,4 +44,5 @@ app.*.map.json
 /android/app/profile
 /android/app/release
 
+pathpal-d5503-firebase-adminsdk-unacr-580b9f4690.json
 *.env

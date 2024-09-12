@@ -1,11 +1,13 @@
 import 'dart:async';
-
 import 'package:flutter/material.dart';
+import 'package:pathpal/data/airline_data.dart';
 import 'package:pathpal/screens/home.dart';
 import 'package:pathpal/screens/my_stuff_screen.dart';
+import 'package:pathpal/screens/notifications.dart';
 import 'package:pathpal/screens/profile.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:pathpal/services/firestore_service.dart';
 
 class Tabs extends StatefulWidget {
   const Tabs({super.key});
@@ -16,19 +18,33 @@ class Tabs extends StatefulWidget {
 
 class _TabsState extends State<Tabs> {
   StreamSubscription<DocumentSnapshot>? _userStreamSubscription;
+  StreamSubscription<QuerySnapshot>? _notificationsStreamSubscription;
   int _selectedIndex = 0;
   String _userName = "Profile";
-
-  final List<Widget> _widgetOptions = <Widget>[
-    const HomeScreen(),
-    const MyStuffScreen(),
-    const ProfileScreen()
-  ];
+  late List<Widget> _widgetOptions;
+  late FirestoreService _firestoreService;
+  late AirlineFetcher _airlineFetcher;
+  bool _hasUnreadNotifications = false;
 
   @override
   void initState() {
     super.initState();
+    _firestoreService = FirestoreService();
+    _airlineFetcher = AirlineFetcher();
     _initUserStream();
+    _initNotificationsStream();
+    _widgetOptions = <Widget>[
+      HomeScreen(onProfileTap: () {
+        _onItemTapped(3);
+      }),
+      const MyStuffScreen(),
+      NotificationsScreen(
+        firestoreService: _firestoreService,
+        airlineFetcher: _airlineFetcher,
+        onOpen: _markNotificationsAsRead,
+      ),
+      const ProfileScreen(),
+    ];
   }
 
   void _initUserStream() {
@@ -49,70 +65,40 @@ class _TabsState extends State<Tabs> {
     }
   }
 
-  // Future<void> _checkAndShowAgePhoneScreen() async {
-  //   final user = FirebaseAuth.instance.currentUser;
-  //   if (user != null &&
-  //       user.providerData.any((info) => info.providerId == 'google.com')) {
-  //     final docSnapshot = await FirebaseFirestore.instance
-  //         .collection('users')
-  //         .doc(user.uid)
-  //         .get();
-
-  //     bool needsAgePhone = false;
-  //     if (!docSnapshot.exists) {
-  //       needsAgePhone = true;
-  //     } else {
-  //       final data = docSnapshot.data();
-  //       if (data == null ||
-  //           !data.containsKey('phone_number') ||
-  //           !data.containsKey('age')) {
-  //         needsAgePhone = true;
-  //       }
-  //     }
-
-  //     if (needsAgePhone) {
-  //       _showAgePhoneScreen();
-  //     }
-  //   }
-  // }
-
-  // void _showAgePhoneScreen() {
-  //   showDialog(
-  //     context: context,
-  //     barrierDismissible: false,
-  //     builder: (context) => Dialog(
-  //       child: AgePhone(
-  //         onSubmit: ({String? phone, String? age}) async {
-  //           if (phone != null && age != null) {
-  //             final user = FirebaseAuth.instance.currentUser;
-  //             if (user != null) {
-  //               await FirebaseFirestore.instance
-  //                   .collection('users')
-  //                   .doc(user.uid)
-  //                   .set({
-  //                 'phone_number': phone,
-  //                 'age': age,
-  //               }, SetOptions(merge: true));
-  //             }
-  //           }
-  //           Navigator.of(context).pop();
-  //         },
-  //         isAuthenticating: false,
-  //       ),
-  //     ),
-  //   );
-  // }
+  void _initNotificationsStream() {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      _notificationsStreamSubscription = FirebaseFirestore.instance
+          .collection('notifications')
+          .where('userId', isEqualTo: user.uid)
+          .where('read', isEqualTo: false)
+          .snapshots()
+          .listen((snapshot) {
+        setState(() {
+          _hasUnreadNotifications = snapshot.docs.isNotEmpty;
+        });
+      });
+    }
+  }
 
   void _onItemTapped(int index) {
     setState(() {
       _selectedIndex = index;
+      if (index == 2) {
+        _markNotificationsAsRead();
+      }
     });
+  }
+
+  void _markNotificationsAsRead() {
+    _firestoreService
+        .markAllNotificationsAsRead(FirebaseAuth.instance.currentUser!.uid);
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: _selectedIndex == 2
+      appBar: _selectedIndex == 3
           ? AppBar(
               title: Text(
                 _userName.toUpperCase(),
@@ -130,16 +116,41 @@ class _TabsState extends State<Tabs> {
       body: _widgetOptions.elementAt(_selectedIndex),
       bottomNavigationBar: BottomNavigationBar(
         backgroundColor: Theme.of(context).colorScheme.surface,
-        items: const <BottomNavigationBarItem>[
-          BottomNavigationBarItem(
+        type: BottomNavigationBarType.fixed,
+        items: <BottomNavigationBarItem>[
+          const BottomNavigationBarItem(
             icon: Icon(Icons.home),
             label: 'Home',
           ),
-          BottomNavigationBarItem(
+          const BottomNavigationBarItem(
             icon: Icon(Icons.flight),
             label: 'My Trips',
           ),
           BottomNavigationBarItem(
+            icon: Stack(
+              children: [
+                const Icon(Icons.notifications),
+                if (_hasUnreadNotifications)
+                  Positioned(
+                    right: 0,
+                    top: 0,
+                    child: Container(
+                      padding: const EdgeInsets.all(1),
+                      decoration: BoxDecoration(
+                        color: Colors.red,
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      constraints: const BoxConstraints(
+                        minWidth: 12,
+                        minHeight: 12,
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+            label: 'Notifications',
+          ),
+          const BottomNavigationBarItem(
             icon: Icon(Icons.person),
             label: 'Profile',
           ),
@@ -154,6 +165,7 @@ class _TabsState extends State<Tabs> {
   @override
   void dispose() {
     _userStreamSubscription?.cancel();
+    _notificationsStreamSubscription?.cancel();
     super.dispose();
   }
 }

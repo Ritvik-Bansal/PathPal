@@ -99,17 +99,21 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
     return Scaffold(
       backgroundColor: Theme.of(context).colorScheme.surface,
       appBar: AppBar(title: const Text('Email Verification Required')),
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Text('Please verify your email to continue.'),
-            const SizedBox(height: 20),
-            ElevatedButton(
-              onPressed: canResendEmail ? sendVerificationEmail : null,
-              child: const Text('Resend Verification Email'),
-            ),
-          ],
+      body: SingleChildScrollView(
+        child: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const SizedBox(height: 120),
+              Image.asset('assets/icon/icon_removed_bg.png'),
+              const Text('Please verify your email to continue.'),
+              const SizedBox(height: 20),
+              ElevatedButton(
+                onPressed: canResendEmail ? sendVerificationEmail : null,
+                child: const Text('Resend Verification Email'),
+              ),
+            ],
+          ),
         ),
       ),
     );
