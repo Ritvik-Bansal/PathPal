@@ -123,6 +123,20 @@ class ReceiverFormState {
     endDate = data['endDate']?.toDate();
   }
 
+  void updateFromMap(Map<String, dynamic> data) {
+    selectedDateRange =
+        '${data['startDate'].toDate().toString().split(' ')[0]} - ${data['endDate'].toDate().toString().split(' ')[0]}';
+    startAirport = _convertToAirport(data['startAirport']);
+    endAirport = _convertToAirport(data['endAirport']);
+    reason = data['reason'] ?? '';
+    otherReason = data['otherReason'] ?? '';
+    partySize = data['partySize'] ?? 1;
+    email = data['userEmail'] ?? '';
+    phoneNumber = data['userPhone'] ?? '';
+    startDate = data['startDate']?.toDate();
+    endDate = data['endDate']?.toDate();
+  }
+
   Airport? _convertToAirport(Map<String, dynamic>? airportData) {
     if (airportData == null) return null;
     return Airport(

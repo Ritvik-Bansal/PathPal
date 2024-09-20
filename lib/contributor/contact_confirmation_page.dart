@@ -73,7 +73,7 @@
 //                 style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
 //             const SizedBox(height: 8),
 //             const Text(
-//               'I acknowledge that, as a Contributor, I willingly offer assistance to fellow travelers in need. I understand that the responsibility for any risks or issues arising during travel arrangements rests solely with me, and I absolve PathPal from any liability or claims related to such incidents. Additionally. I recognize the importance of maintaining privacy and confidentiality, especially regarding personal details, and I commit to respecting the privacy of all users involved in this collaborative travel platform when contacting matched receivers.',
+//               'I acknowledge that, as a Volunteer, I willingly offer assistance to fellow travelers in need. I understand that the responsibility for any risks or issues arising during travel arrangements rests solely with me, and I absolve PathPal from any liability or claims related to such incidents. Additionally. I recognize the importance of maintaining privacy and confidentiality, especially regarding personal details, and I commit to respecting the privacy of all users involved in this collaborative travel platform when contacting matched receivers.',
 //               style: TextStyle(fontSize: 14),
 //             ),
 //             const SizedBox(height: 16),

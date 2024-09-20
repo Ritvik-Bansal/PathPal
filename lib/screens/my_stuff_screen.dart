@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 import 'package:pathpal/contributor/contributor_detail_screen.dart';
 import 'package:pathpal/contributor/contributor_form_screen.dart';
 import 'package:pathpal/data/airline_data.dart';
+import 'package:pathpal/receiver/reciever_form_screen.dart';
 import 'package:pathpal/services/firestore_service.dart';
 
 class MyStuffScreen extends StatefulWidget {
@@ -106,8 +107,38 @@ class _MyStuffScreenState extends State<MyStuffScreen> {
       children: [
         Padding(
           padding: const EdgeInsets.all(16.0),
-          child: Text('My Form Submissions',
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+          child: Row(
+            children: [
+              Icon(Icons.volunteer_activism_rounded, size: 24),
+              SizedBox(width: 8),
+              Text('My Offerings',
+                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+              SizedBox(width: 8),
+              IconButton(
+                icon: Icon(Icons.info_outline),
+                onPressed: () {
+                  showDialog(
+                    context: context,
+                    builder: (BuildContext context) {
+                      return AlertDialog(
+                        title: Text('My Offerings'),
+                        content: Text(
+                            'Your submitted flight information for people in need.'),
+                        actions: [
+                          TextButton(
+                            child: Text('OK'),
+                            onPressed: () {
+                              Navigator.of(context).pop();
+                            },
+                          ),
+                        ],
+                      );
+                    },
+                  );
+                },
+              ),
+            ],
+          ),
         ),
         ListView.builder(
           shrinkWrap: true,
@@ -145,8 +176,38 @@ class _MyStuffScreenState extends State<MyStuffScreen> {
       children: [
         Padding(
           padding: const EdgeInsets.all(16.0),
-          child: Text('My Tentative Requests',
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+          child: Row(
+            children: [
+              Icon(Icons.travel_explore, size: 24),
+              SizedBox(width: 8),
+              Text('My Requests',
+                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+              SizedBox(width: 8),
+              IconButton(
+                icon: Icon(Icons.info_outline),
+                onPressed: () {
+                  showDialog(
+                    context: context,
+                    builder: (BuildContext context) {
+                      return AlertDialog(
+                        title: Text('My Requests'),
+                        content:
+                            Text('My tentative flights requests from the past'),
+                        actions: [
+                          TextButton(
+                            child: Text('OK'),
+                            onPressed: () {
+                              Navigator.of(context).pop();
+                            },
+                          ),
+                        ],
+                      );
+                    },
+                  );
+                },
+              ),
+            ],
+          ),
         ),
         ListView.builder(
           shrinkWrap: true,
@@ -159,11 +220,25 @@ class _MyStuffScreenState extends State<MyStuffScreen> {
               data: data,
               docId: doc.id,
               onDelete: () => _deleteTentativeRequest(doc.id),
+              onEdit: () => _editTentativeRequest(doc.id, data),
             );
           },
         ),
       ],
     );
+  }
+
+  void _editTentativeRequest(String docId, Map<String, dynamic> data) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => RecieverFormScreen(
+          existingData: data,
+          docId: docId,
+          isEditing: true,
+        ),
+      ),
+    ).then((_) => setState(() {}));
   }
 
   void _deleteTentativeRequest(String docId) {
@@ -231,9 +306,39 @@ class _MyStuffScreenState extends State<MyStuffScreen> {
       children: [
         Padding(
           padding: const EdgeInsets.all(16.0),
-          child: Text(
-            'Favorited Trips',
-            style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+          child: Row(
+            children: [
+              Icon(Icons.check_circle, size: 24),
+              SizedBox(width: 8),
+              Text(
+                'My Favorite Matches',
+                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+              ),
+              SizedBox(width: 8),
+              IconButton(
+                icon: Icon(Icons.info_outline),
+                onPressed: () {
+                  showDialog(
+                    context: context,
+                    builder: (BuildContext context) {
+                      return AlertDialog(
+                        title: Text('My Favorite Matches'),
+                        content:
+                            Text('Flights favorited from previous matches'),
+                        actions: [
+                          TextButton(
+                            child: Text('OK'),
+                            onPressed: () {
+                              Navigator.of(context).pop();
+                            },
+                          ),
+                        ],
+                      );
+                    },
+                  );
+                },
+              ),
+            ],
           ),
         ),
         ListView.builder(
@@ -305,13 +410,16 @@ class _MyStuffScreenState extends State<MyStuffScreen> {
               child: const Text('Delete'),
               onPressed: () async {
                 try {
-                  await _firestoreService
-                      .removeContributorFromAllFavorites(docId);
-
                   await _firestore
                       .collection('contributors')
                       .doc(docId)
                       .delete();
+
+                  await _firestoreService
+                      .deleteNotificationsForContributor(docId);
+
+                  await _firestoreService
+                      .removeContributorFromAllFavorites(docId);
 
                   Navigator.of(context).pop();
                   setState(() {});
@@ -325,7 +433,7 @@ class _MyStuffScreenState extends State<MyStuffScreen> {
                   ScaffoldMessenger.of(context).clearSnackBars();
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(
-                        content: Text('Error deleting contributor form')),
+                        content: Text('Error deleting volunteer form')),
                   );
                 }
               },
@@ -445,8 +553,8 @@ class ContributorFormCard extends StatelessWidget {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    DateFormat("MMM d, yyyy':' h:mm a")
-                        .format((data['flightDateTime'] as Timestamp).toDate()),
+                    DateFormat("MMM d, yyyy':' h:mm a").format(
+                        (data['flightDateTimeFirstLeg'] as Timestamp).toDate()),
                     style: const TextStyle(fontSize: 16),
                   ),
                 ],
@@ -497,7 +605,7 @@ class FavoritedContributorCard extends StatelessWidget {
     String to = contributorData['arrivalAirport']?['iata'] ?? 'Unknown';
     String? via = contributorData['layoverAirport']?['iata'];
     DateTime flightDate =
-        (contributorData['flightDateTime'] as Timestamp).toDate();
+        (contributorData['flightDateTimeFirstLeg'] as Timestamp).toDate();
     String formattedDate = DateFormat('MMM d').format(flightDate);
 
     String flightInfo = '$from to $to';
@@ -577,12 +685,14 @@ class TentativeRequestCard extends StatelessWidget {
   final Map<String, dynamic> data;
   final String docId;
   final VoidCallback onDelete;
+  final VoidCallback onEdit;
 
   const TentativeRequestCard({
     Key? key,
     required this.data,
     required this.docId,
     required this.onDelete,
+    required this.onEdit,
   }) : super(key: key);
 
   @override
@@ -628,12 +738,20 @@ class TentativeRequestCard extends StatelessWidget {
               ],
             ),
           ),
-          IconButton(
-            icon: const Icon(
-              Icons.delete,
-              color: Colors.red,
-            ),
-            onPressed: onDelete,
+          Row(
+            children: [
+              IconButton(
+                icon: const Icon(Icons.edit),
+                onPressed: onEdit,
+              ),
+              IconButton(
+                icon: const Icon(
+                  Icons.delete,
+                  color: Colors.red,
+                ),
+                onPressed: onDelete,
+              ),
+            ],
           ),
         ],
       ),

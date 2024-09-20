@@ -71,7 +71,7 @@ class _FilteredContributorsScreenState
               'Flights from ${widget.receiverFormState.startAirport?.iata.toString() ?? 'Unknown'} to ${widget.receiverFormState.endAirport?.iata.toString() ?? 'Unknown'}'),
           bottom: TabBar(
             tabs: [
-              Tab(text: 'Contributors'),
+              Tab(text: 'Volunteers'),
               Tab(text: 'Tentative Receivers'),
             ],
           ),
@@ -143,7 +143,7 @@ class _FilteredContributorsScreenState
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       Text(
-                        'No matching contributors found',
+                        'No matching volunteers found',
                         style: TextStyle(fontSize: 16),
                       ),
                       SizedBox(height: 40),
@@ -216,9 +216,9 @@ class _FilteredContributorsScreenState
                             contributorData['layoverAirport']?['city'] ?? 'N/A',
                         airline: contributorData['flightNumberFirstLeg'] ?? '',
                         profilePicture: userData['profile_picture'] ?? '',
-                        flightDate:
-                            (contributorData['flightDateTime'] as Timestamp)
-                                .toDate(),
+                        flightDate: (contributorData['flightDateTimeFirstLeg']
+                                as Timestamp)
+                            .toDate(),
                         onTap: () {
                           Navigator.push<bool>(
                             context,
@@ -280,9 +280,9 @@ class _FilteredContributorsScreenState
 
     return FirebaseFirestore.instance
         .collection('contributors')
-        .where('flightDateTime',
+        .where('flightDateTimeFirstLeg',
             isGreaterThanOrEqualTo: widget.receiverFormState.startDate)
-        .where('flightDateTime',
+        .where('flightDateTimeFirstLeg',
             isLessThanOrEqualTo:
                 widget.receiverFormState.endDate!.add(const Duration(days: 1)))
         .where('departureAirport.iata',

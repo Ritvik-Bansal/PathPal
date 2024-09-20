@@ -25,31 +25,62 @@ class EmailService {
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Potential Contributor Found!</title>
+  <title>Potential Volunteer Found!</title>
 </head>
 <body style="margin:0; padding:0; background-color:#f7f9fc; font-family: Arial, sans-serif; color:#333;">
   <div style="max-width:600px; margin:20px auto; background-color:#ffffff; border-radius:8px; box-shadow:0 2px 4px rgba(0, 0, 0, 0.1); overflow:hidden;">
     <div style="background-color:#0073e6; color:#ffffff; padding:20px; text-align:center;">
-      <h1 style="margin:0; font-size:28px;">Potential Contributor Found!</h1>
+      <h1 style="margin:0; font-size:28px;">Potential Volunteer Found!</h1>
     </div>
     <div style="padding:20px;">
       <p style="font-size:16px; line-height:1.5;">
         Hi <strong>${userName}</strong>,
       </p>
       <p style="font-size:16px; line-height:1.5;">
-        Great news! A contributor has submitted a flight that matches your tentative request.
+        Great news! A Volunteer has submitted a flight that matches your tentative request.
       </p>
       <div style="background-color:#f1f4f8; padding:15px; border-radius:5px; margin:20px 0;">
         <h2 style="font-size:20px; color:#0073e6; margin-top:0;">Flight Details:</h2>
-        <p style="font-size:16px; line-height:1.5; margin:5px 0;">
-          <strong>From:</strong> ${formState.departureAirport?.city}, ${formState.departureAirport?.country}<br>
-          <strong>To:</strong> ${formState.arrivalAirport?.city}, ${formState.arrivalAirport?.country}<br>
-          <strong>Date:</strong> ${formState.flightDateTime?.toLocal().toString().split(' ')[0]}<br>
-          <strong>Flight Number:</strong> ${formState.flightNumber.toUpperCase()}
-        </p>
+      ${formState.hasLayover ? '''
+      <table style="width:100%; border-collapse: collapse; margin-top: 10px; margin-bottom: 10px;">
+        <tr style="background-color: #f1f4f8;">
+          <th style="padding: 10px; border: 1px solid #ddd; text-align: left;">Departure</th>
+          <th style="padding: 10px; border: 1px solid #ddd; text-align: left;">Arrival</th>
+          <th style="padding: 10px; border: 1px solid #ddd; text-align: left;">Flight Number</th>
+          <th style="padding: 10px; border: 1px solid #ddd; text-align: left;">Date-Time</th>
+        </tr>
+        <tr>
+          <td style="padding: 10px; border: 1px solid #ddd;">${formState.departureAirport?.city}, ${formState.departureAirport?.country}</td>
+          <td style="padding: 10px; border: 1px solid #ddd;">${formState.layoverAirport?.city}, ${formState.layoverAirport?.country}</td>
+          <td style="padding: 10px; border: 1px solid #ddd;">${formState.flightNumberFirstLeg.toUpperCase()}</td>
+          <td style="padding: 10px; border: 1px solid #ddd;">${formState.flightDateTimeFirstLeg?.toLocal().toString().split(' ')[0]} ${formState.flightDateTimeFirstLeg?.toLocal().toString().split(' ')[1].substring(0, 5)}</td>
+        </tr>
+        <tr>
+          <td style="padding: 10px; border: 1px solid #ddd;">${formState.layoverAirport?.city}, ${formState.layoverAirport?.country}</td>
+          <td style="padding: 10px; border: 1px solid #ddd;">${formState.arrivalAirport?.city}, ${formState.arrivalAirport?.country}</td>
+          <td style="padding: 10px; border: 1px solid #ddd;">${formState.flightNumberSecondLeg.toUpperCase()}</td>
+          <td style="padding: 10px; border: 1px solid #ddd;">${formState.flightDateTimeSecondLeg?.toLocal().toString().split(' ')[0]} ${formState.flightDateTimeSecondLeg?.toLocal().toString().split(' ')[1].substring(0, 5)}</td>
+        </tr>
+      </table>
+      ''' : '''
+      <table style="width:100%; border-collapse: collapse; margin-top: 10px; margin-bottom: 10px;">
+        <tr style="background-color: #f1f4f8;">
+          <th style="padding: 10px; border: 1px solid #ddd; text-align: left;">Departure</th>
+          <th style="padding: 10px; border: 1px solid #ddd; text-align: left;">Arrival</th>
+          <th style="padding: 10px; border: 1px solid #ddd; text-align: left;">Flight Number</th>
+          <th style="padding: 10px; border: 1px solid #ddd; text-align: left;">Date-Time</th>
+        </tr>
+        <tr>
+          <td style="padding: 10px; border: 1px solid #ddd;">${formState.departureAirport?.city}, ${formState.departureAirport?.country}</td>
+          <td style="padding: 10px; border: 1px solid #ddd;">${formState.arrivalAirport?.city}, ${formState.arrivalAirport?.country}</td>
+          <td style="padding: 10px; border: 1px solid #ddd;">${formState.flightNumber.toUpperCase()}</td>
+          <td style="padding: 10px; border: 1px solid #ddd;">${formState.flightDateTimeFirstLeg?.toLocal().toString().split(' ')[0]} ${formState.flightDateTimeFirstLeg?.toLocal().toString().split(' ')[1].substring(0, 5)}</td>
+        </tr>
+      </table>
+      '''}
       </div>
       <p style="font-size:16px; line-height:1.5;">
-        Log in to the PathPal app to view more details and contact the contributor if you're interested in connecting.
+        Log in to the PathPal app to view more details and contact the Volunteer if you're interested in connecting.
       </p>
       <p style="font-size:16px; line-height:1.5;">
         Safe travels,<br>
@@ -84,9 +115,9 @@ class EmailService {
               'To': [
                 {'Email': userEmail, 'Name': userName}
               ],
-              'Subject': 'PathPal: Potential Contributor Found!',
+              'Subject': 'PathPal: Potential Volunteer Found!',
               'HTMLPart': emailContent,
-              'CustomID': 'PathPalContributorFoundEmail'
+              'CustomID': 'PathPalVolunteerFoundEmail'
             }
           ]
         }),
@@ -101,8 +132,8 @@ class EmailService {
 
       await _firestoreService.addNotification(
         userId,
-        'Potential Contributor Found',
-        'A contributor has submitted a flight that matches your tentative request.',
+        'Potential Volunteer Found',
+        'A Volunteer has submitted a flight that matches your tentative request.',
         contributorDocId: contributorDocId,
       );
 
@@ -125,9 +156,9 @@ class EmailService {
       Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
       DateTime startDate = (data['startDate'] as Timestamp).toDate();
       DateTime endDate = (data['endDate'] as Timestamp).toDate();
-      if (formState.flightDateTime != null &&
-          formState.flightDateTime!.isAfter(startDate) &&
-          formState.flightDateTime!.isBefore(endDate)) {
+      if (formState.flightDateTimeFirstLeg != null &&
+          formState.flightDateTimeFirstLeg!.isAfter(startDate) &&
+          formState.flightDateTimeFirstLeg!.isBefore(endDate)) {
         String userEmail = data['userEmail'];
         String userName = data['userName'];
         String userId = data['userId'];

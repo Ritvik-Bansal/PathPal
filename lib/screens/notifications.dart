@@ -101,7 +101,11 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                 child: Column(
                   children: [
                     ListTile(
-                      title: Text(notification['title'] ?? 'No title'),
+                      leading: _buildNotificationImage(notification),
+                      title: Text(
+                        notification['title'] ?? 'No title',
+                        style: TextStyle(fontWeight: FontWeight.bold),
+                      ),
                       subtitle: Text(notification['body'] ?? 'No body'),
                       trailing: Text(
                         _formatDate(notification['createdAt'] as Timestamp? ??
@@ -126,16 +130,52 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     );
   }
 
+  Widget _buildNotificationImage(DocumentSnapshot notification) {
+    String? imageUrl = notification['imageUrl'];
+    if (imageUrl == null) {
+      return CircleAvatar(
+        backgroundColor: Colors.grey[300],
+        child: Icon(Icons.notifications, color: Colors.grey[600]),
+      );
+    } else if (imageUrl == 'assets/icon/pathpal_logo.png') {
+      return CircleAvatar(
+        backgroundImage: AssetImage(imageUrl),
+      );
+    } else {
+      return CircleAvatar(
+        backgroundImage: NetworkImage(imageUrl),
+        onBackgroundImageError: (exception, stackTrace) {
+          print('Error loading image: $exception');
+        },
+      );
+    }
+  }
+
   String _formatDate(Timestamp timestamp) {
     DateTime dateTime = timestamp.toDate();
-    return '${dateTime.month}/${dateTime.day}/${dateTime.year}';
+    List<String> months = [
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sept',
+      'Oct',
+      'Nov',
+      'Dec'
+    ];
+    String month = months[dateTime.month - 1];
+    return '$month ${dateTime.day}';
   }
 
   void _handleNotificationTap(
       BuildContext context, DocumentSnapshot notification) {
     final title = notification['title'] as String?;
 
-    if (title == 'Potential Contributor Found') {
+    if (title == 'Potential Volunteer Found') {
       _showContributorDetails(context, notification);
     } else if (title == 'New Contact Request' ||
         title == 'A Fellow Receiver Contacted You') {
@@ -166,7 +206,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
         );
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Contributor details not found')),
+          const SnackBar(content: Text('Volunteer details not found')),
         );
       }
     }
@@ -179,7 +219,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
         context: context,
         builder: (BuildContext context) => ReceiverInfoDialog(
           userId: userId,
-          isContributor: notification['title'] == 'New Contact Request',
+          isContributor: false,
         ),
       );
     }

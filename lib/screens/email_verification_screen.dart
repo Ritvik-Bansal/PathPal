@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'dart:async';
-import 'package:pathpal/screens/auth.dart'; // Import your AuthScreen
+import 'package:pathpal/screens/auth.dart';
 
 class EmailVerificationScreen extends StatefulWidget {
   const EmailVerificationScreen({super.key});

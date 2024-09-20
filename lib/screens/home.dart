@@ -82,10 +82,25 @@ class HomeScreen extends StatelessWidget {
                         snapshot.data!.data() as Map<String, dynamic>?;
                     final userName = userData?['name'] ?? 'User';
 
-                    return Text(
-                      'Hello, ${userName.toString().substring(0, userName.toString().indexOf(' '))}.\nWelcome to PathPal.',
-                      style: const TextStyle(
-                          fontSize: 32, fontWeight: FontWeight.bold),
+                    return Text.rich(
+                      TextSpan(
+                        text: 'Hello, ',
+                        style: const TextStyle(
+                            fontSize: 32, fontWeight: FontWeight.bold),
+                        children: [
+                          TextSpan(
+                            text: userName
+                                .toString()
+                                .substring(0, userName.toString().indexOf(' ')),
+                            style: const TextStyle(
+                              color: Color.fromARGB(255, 120, 192, 250),
+                            ),
+                          ),
+                          const TextSpan(
+                            text: '.\nWelcome to PathPal.',
+                          ),
+                        ],
+                      ),
                       textAlign: TextAlign.center,
                     );
                   },
@@ -143,7 +158,7 @@ class HomeScreen extends StatelessWidget {
                     );
                   },
                   icon: Icon(
-                    Icons.contact_support_rounded,
+                    Icons.travel_explore,
                     size: 30,
                     color: Theme.of(context).colorScheme.onPrimaryContainer,
                   ),

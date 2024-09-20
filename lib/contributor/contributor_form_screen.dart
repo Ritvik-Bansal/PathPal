@@ -112,7 +112,9 @@ class _ContributorFormScreenState extends State<ContributorFormScreen> {
         await _firestoreService.submitContributorForm(_formState);
         ScaffoldMessenger.of(context).clearSnackBars();
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Form submitted successfully')),
+          const SnackBar(
+              content: Text(
+                  'Form submitted successfully. Please check your email for details. If you do not see the email in your inbox, please check your junk mail folder and add "info@pathpal.org" to your Safe Sender List.')),
         );
         await _sendConfirmationEmail();
       }
@@ -139,6 +141,11 @@ class _ContributorFormScreenState extends State<ContributorFormScreen> {
         return;
       }
 
+      String formatDateTime(DateTime? dateTime) {
+        if (dateTime == null) return 'N/A';
+        return '${dateTime.toLocal().month}/${dateTime.toLocal().day}/${dateTime.toLocal().year} at ${dateTime.toLocal().hour % 12 == 0 ? 12 : dateTime.toLocal().hour % 12}:${dateTime.toLocal().minute.toString().padLeft(2, '0')} ${dateTime.toLocal().hour < 12 ? 'AM' : 'PM'}';
+      }
+
       final emailContent = '''
 <!DOCTYPE html>
 <html lang="en">
@@ -154,19 +161,50 @@ class _ContributorFormScreenState extends State<ContributorFormScreen> {
     </div>
     <div style="padding:20px;">
       <p style="font-size:16px; line-height:1.5;">
-        Hi <strong>${user.displayName ?? 'PathPal Contributor'}</strong>,
+        Hi <strong>${user.displayName ?? 'PathPal Volunteer'}</strong>,
       </p>
       <p style="font-size:16px; line-height:1.5;">
         Your flight details have been successfully submitted! ✈️
       </p>
       <div style="background-color:#f1f4f8; padding:15px; border-radius:5px; margin:20px 0;">
         <h2 style="font-size:20px; color:#0073e6; margin-top:0;">Here are your trip details:</h2>
-        <p style="font-size:16px; line-height:1.5; margin:5px 0;">
-          <strong>Flight Number:</strong> ${_formState.flightNumber}<br>
-          <strong>Departure:</strong> ${_formState.departureAirport?.city}, ${_formState.departureAirport?.country}<br>
-          <strong>Arrival:</strong> ${_formState.arrivalAirport?.city}, ${_formState.arrivalAirport?.country}<br>
-          <strong>Date:</strong> ${_formState.flightDateTime?.toLocal().toString().split(' ')[0]}
-        </p>
+        ${_formState.hasLayover ? '''
+        <table style="width:100%; border-collapse: collapse; margin-top: 10px; margin-bottom: 10px;">
+          <tr style="background-color: #f1f4f8;">
+            <th style="padding: 10px; border: 1px solid #ddd; text-align: left;">Departure</th>
+            <th style="padding: 10px; border: 1px solid #ddd; text-align: left;">Arrival</th>
+            <th style="padding: 10px; border: 1px solid #ddd; text-align: left;">Flight Number</th>
+            <th style="padding: 10px; border: 1px solid #ddd; text-align: left;">Date-Time</th>
+          </tr>
+          <tr>
+            <td style="padding: 10px; border: 1px solid #ddd;">${_formState.departureAirport?.city}, ${_formState.departureAirport?.country}</td>
+            <td style="padding: 10px; border: 1px solid #ddd;">${_formState.layoverAirport?.city}, ${_formState.layoverAirport?.country}</td>
+            <td style="padding: 10px; border: 1px solid #ddd;">${_formState.flightNumberFirstLeg}</td>
+            <td style="padding: 10px; border: 1px solid #ddd;">${formatDateTime(_formState.flightDateTimeFirstLeg)}</td>
+          </tr>
+          <tr>
+            <td style="padding: 10px; border: 1px solid #ddd;">${_formState.layoverAirport?.city}, ${_formState.layoverAirport?.country}</td>
+            <td style="padding: 10px; border: 1px solid #ddd;">${_formState.arrivalAirport?.city}, ${_formState.arrivalAirport?.country}</td>
+            <td style="padding: 10px; border: 1px solid #ddd;">${_formState.flightNumberSecondLeg}</td>
+            <td style="padding: 10px; border: 1px solid #ddd;">${formatDateTime(_formState.flightDateTimeSecondLeg)}</td>
+          </tr>
+        </table>
+        ''' : '''
+        <table style="width:100%; border-collapse: collapse; margin-top: 10px; margin-bottom: 10px;">
+          <tr style="background-color: #f1f4f8;">
+            <th style="padding: 10px; border: 1px solid #ddd; text-align: left;">Departure</th>
+            <th style="padding: 10px; border: 1px solid #ddd; text-align: left;">Arrival</th>
+            <th style="padding: 10px; border: 1px solid #ddd; text-align: left;">Flight Number</th>
+            <th style="padding: 10px; border: 1px solid #ddd; text-align: left;">Date-Time</th>
+          </tr>
+          <tr>
+            <td style="padding: 10px; border: 1px solid #ddd;">${_formState.departureAirport?.city}, ${_formState.departureAirport?.country}</td>
+            <td style="padding: 10px; border: 1px solid #ddd;">${_formState.arrivalAirport?.city}, ${_formState.arrivalAirport?.country}</td>
+            <td style="padding: 10px; border: 1px solid #ddd;">${_formState.flightNumber}</td>
+            <td style="padding: 10px; border: 1px solid #ddd;">${formatDateTime(_formState.flightDateTimeFirstLeg)}</td>
+          </tr>
+        </table>
+        '''}
       </div>
       <p style="font-size:16px; line-height:1.5;">
         If you need to make any changes, feel free to update your info in the <strong>"My Trips"</strong> section of our app.
@@ -205,7 +243,7 @@ class _ContributorFormScreenState extends State<ContributorFormScreen> {
             {
               'From': {'Email': 'noreply@pathpal.org', 'Name': 'PathPal'},
               'To': [
-                {'Email': userEmail, 'Name': user.displayName ?? 'Contributor'}
+                {'Email': userEmail, 'Name': user.displayName ?? 'Volunteer'}
               ],
               'Subject': 'Thank You for Your PathPal Contribution!',
               'HTMLPart': emailContent,
@@ -258,7 +296,7 @@ class _ContributorFormScreenState extends State<ContributorFormScreen> {
     return Scaffold(
       backgroundColor: Theme.of(context).colorScheme.surface,
       appBar: AppBar(
-        title: const Text('Become a Contributor'),
+        title: const Text('Become a Volunteer'),
         centerTitle: true,
       ),
       body: Column(
@@ -286,9 +324,14 @@ class _ContributorFormScreenState extends State<ContributorFormScreen> {
                   _formState.updateFlightNumberSecondLeg(flightNumber);
                 });
               },
-              onFlightDateTimeUpdated: (dateTime) {
+              onFlightDateTimeFirstLegUpdated: (dateTime) {
                 setState(() {
-                  _formState.updateFlightDateTime(dateTime);
+                  _formState.updateFlightDateTimeFirstLeg(dateTime);
+                });
+              },
+              onFlightDateTimeSecondLegUpdated: (dateTime) {
+                setState(() {
+                  _formState.updateFlightDateTimeSecondLeg(dateTime);
                 });
               },
               onDepartureAirportSelected: _selectDepartureAirport,

@@ -1,6 +1,7 @@
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:country_picker/country_picker.dart';
+import 'package:pathpal/screens/learn_more.dart';
 import 'package:pathpal/screens/privacy_policy_screen.dart';
 import 'package:pathpal/screens/terms_conditions_screen.dart';
 // import 'package:pathpal/services/apple_auth_flow.dart';
@@ -80,7 +81,7 @@ class _AuthFormState extends State<AuthForm> {
   @override
   Widget build(BuildContext context) {
     return Card(
-      elevation: 1,
+      elevation: 0,
       color: Theme.of(context).colorScheme.surface,
       margin: const EdgeInsets.all(10),
       child: Padding(
@@ -255,10 +256,24 @@ class _AuthFormState extends State<AuthForm> {
                   ),
                   child: Text(widget.isLogin ? "LOGIN" : "SIGN UP"),
                 ),
+              const SizedBox(height: 10),
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Text(widget.isLogin ? "New User?" : "Have an account?"),
+                  if (widget.isLogin) ...[
+                    TextButton(
+                      onPressed: () {
+                        Navigator.pushReplacement(
+                          context,
+                          MaterialPageRoute(
+                              builder: (context) => const LearnMoreScreen()),
+                        );
+                      },
+                      child: Text("Learn more"),
+                    ),
+                    Text("or"),
+                  ],
                   TextButton(
                     onPressed: widget.onToggleAuthMode,
                     child: Text(widget.isLogin ? "Sign up" : "Login"),

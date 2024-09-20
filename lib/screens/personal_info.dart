@@ -40,28 +40,6 @@ class _PersonalInfoScreenState extends State<PersonalInfoScreen> {
     });
   }
 
-  // void showPicker() {
-  //   showCountryPicker(
-  //     context: context,
-  //     favorite: ['IN', 'US', 'CA'],
-  //     exclude: ['CN'],
-  //     countryListTheme: CountryListThemeData(
-  //       bottomSheetHeight: 600,
-  //       borderRadius: BorderRadius.circular(20),
-  //       inputDecoration: const InputDecoration(
-  //         prefixIcon: Icon(Icons.search),
-  //         hintText: 'Search your country here..',
-  //         border: InputBorder.none,
-  //       ),
-  //     ),
-  //     onSelect: (selectedCount) {
-  //       setState(() {
-  //         country = selectedCount;
-  //       });
-  //     },
-  //   );
-  // }
-
   void _submit() async {
     final isValid = _form.currentState!.validate();
 
@@ -254,26 +232,6 @@ class _PersonalInfoScreenState extends State<PersonalInfoScreen> {
                                     _enteredName = value!;
                                   },
                                 ),
-                                // SizedBox(height: 10),
-                                // TextFormField(
-                                //   decoration: const InputDecoration(
-                                //     label: Text('Age'),
-                                //   ),
-                                //   initialValue: userData['age'],
-                                //   keyboardType: TextInputType.number,
-                                //   validator: (value) {
-                                //     if (value!.isEmpty ||
-                                //         num.tryParse(value) == null) {
-                                //       return 'Please enter an age';
-                                //     } else if (num.parse(value) > 120) {
-                                //       return 'Please enter a valid age';
-                                //     }
-                                //     return null;
-                                //   },
-                                //   onSaved: (value) {
-                                //     _enteredAge = value!;
-                                //   },
-                                // ),
                                 const SizedBox(height: 30),
                                 const Text(
                                   "Account Information",
@@ -301,63 +259,6 @@ class _PersonalInfoScreenState extends State<PersonalInfoScreen> {
                                   },
                                   onSaved: (newValue) {},
                                 ),
-                                // SizedBox(height: 10),
-                                // TextFormField(
-                                //   onFieldSubmitted: (phoneNumber) {
-                                //     if (country != null) {
-                                //       ScaffoldMessenger.of(context)
-                                //           .showSnackBar(
-                                //         SnackBar(
-                                //           content: Text(
-                                //               '+${country!.phoneCode}$phoneNumber'),
-                                //         ),
-                                //       );
-                                //     }
-                                //   },
-                                //   initialValue: number,
-                                //   keyboardType: TextInputType.number,
-                                //   decoration: InputDecoration(
-                                //     contentPadding: EdgeInsets.only(top: 15),
-                                //     hintText: 'Enter phone number',
-                                //     prefixIcon: GestureDetector(
-                                //       behavior: HitTestBehavior.opaque,
-                                //       onTap: showPicker,
-                                //       child: Container(
-                                //         height: 56,
-                                //         width: 100,
-                                //         alignment: Alignment.center,
-                                //         child: country != null
-                                //             ? Text(
-                                //                 '${country!.flagEmoji} +${country!.phoneCode}',
-                                //                 style: TextStyle(
-                                //                   fontSize: 18,
-                                //                   color: Theme.of(context)
-                                //                       .colorScheme
-                                //                       .onSurface,
-                                //                   fontWeight: FontWeight.bold,
-                                //                 ),
-                                //               )
-                                //             : const Text('Select Country'),
-                                //       ),
-                                //     ),
-                                //   ),
-                                //   validator: (value) {
-                                //     if (value!.isEmpty) {
-                                //       return 'Please enter a phone number';
-                                //     } else if (!RegExp(
-                                //             r'^\s*(?:\+?(\d{1,3}))?[-. (]*(\d{3})[-. )]*(\d{3})[-. ]*(\d{4})(?: *x(\d+))?\s*$')
-                                //         .hasMatch(value)) {
-                                //       return 'Please enter a valid phone number';
-                                //     }
-                                //     return null;
-                                //   },
-                                //   onSaved: (value) {
-                                //     if (country != null) {
-                                //       _enteredPhone =
-                                //           "+${country!.phoneCode} ${value!}";
-                                //     }
-                                //   },
-                                // ),
                                 const SizedBox(height: 24),
                                 Center(
                                   child: ElevatedButton(

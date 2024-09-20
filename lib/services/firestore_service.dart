@@ -63,6 +63,10 @@ class FirestoreService {
         'updatedAt': FieldValue.serverTimestamp(),
       };
 
+      await _firestore.collection('users').doc(user.uid).update({
+        'phone': formState.phoneNumber,
+      });
+
       if (existingForm != null) {
         await _firestore
             .collection('receivers')
@@ -131,7 +135,8 @@ class FirestoreService {
         'departureAirport': formState.departureAirport?.toJson(),
         'arrivalAirport': formState.arrivalAirport?.toJson(),
         'hasLayover': formState.hasLayover,
-        'flightDateTime': Timestamp.fromDate(formState.flightDateTime!),
+        'flightDateTimeFirstLeg':
+            Timestamp.fromDate(formState.flightDateTimeFirstLeg!),
         'flightNumberFirstLeg': formState.flightNumber.toUpperCase(),
         'updatedAt': FieldValue.serverTimestamp(),
       };
@@ -140,6 +145,8 @@ class FirestoreService {
         contributorData['flightNumberSecondLeg'] =
             formState.flightNumberSecondLeg.toUpperCase();
         contributorData['layoverAirport'] = formState.layoverAirport?.toJson();
+        contributorData['flightDateTimeSecondLeg'] =
+            Timestamp.fromDate(formState.flightDateTimeSecondLeg!);
       }
 
       DocumentReference contributorRef =
@@ -148,7 +155,7 @@ class FirestoreService {
 
       await _emailService.checkTentativeReceivers(formState, contributorDocId);
     } catch (e) {
-      print('Error submitting contributor form: $e');
+      print('Error submitting Volunteer form: $e');
       rethrow;
     }
   }
@@ -214,15 +221,30 @@ class FirestoreService {
       WriteBatch batch = _firestore.batch();
 
       for (QueryDocumentSnapshot userDoc in usersWithFavorite.docs) {
-        List<String> favorites =
-            List<String>.from(userDoc['favoritedContributors']);
-        favorites.remove(contributorId);
-        batch.update(userDoc.reference, {'favoritedContributors': favorites});
+        Map<String, dynamic>? userData =
+            userDoc.data() as Map<String, dynamic>?;
+
+        if (userData != null) {
+          List<String> favorites =
+              List<String>.from(userData['favoritedContributors'] ?? []);
+          favorites.remove(contributorId);
+          batch.update(userDoc.reference, {'favoritedContributors': favorites});
+
+          if (userData.containsKey('contactedContributors')) {
+            List<String> contacted =
+                List<String>.from(userData['contactedContributors'] ?? []);
+            if (contacted.contains(contributorId)) {
+              contacted.remove(contributorId);
+              batch.update(
+                  userDoc.reference, {'contactedContributors': contacted});
+            }
+          }
+        }
       }
 
       await batch.commit();
     } catch (e) {
-      print('Error removing contributor from favorites: $e');
+      print('Error removing contributor from favorites and contacts: $e');
       rethrow;
     }
   }
@@ -295,6 +317,8 @@ class FirestoreService {
           .collection('contributors')
           .doc(contributorId)
           .update(updateData);
+
+      await _emailService.checkTentativeReceivers(formState, contributorId);
     } catch (e) {
       print('Error updating contributor form: $e');
       rethrow;
@@ -415,6 +439,37 @@ class FirestoreService {
     }
   }
 
+  Future<void> updateTentativeReceiver(
+      String docId, ReceiverFormState formState) async {
+    try {
+      final user = _auth.currentUser;
+      if (user == null) throw Exception('No authenticated user found');
+
+      final tentativeReceiverData = {
+        'userId': user.uid,
+        'userName': user.displayName,
+        'userPhone': formState.phoneNumber,
+        'userEmail': formState.email,
+        'startDate': formState.startDate,
+        'endDate': formState.endDate,
+        'startAirport': formState.startAirport?.toJson(),
+        'endAirport': formState.endAirport?.toJson(),
+        'reason': formState.reason,
+        'otherReason': formState.otherReason,
+        'partySize': formState.partySize,
+        'updatedAt': FieldValue.serverTimestamp(),
+      };
+
+      await _firestore
+          .collection('tentativeReceivers')
+          .doc(docId)
+          .update(tentativeReceiverData);
+    } catch (e) {
+      print('Error updating tentative receiver: $e');
+      rethrow;
+    }
+  }
+
   Future<DocumentSnapshot?> getTentativeReceiverRequest(
       String startAirportIata, String endAirportIata) async {
     final user = _auth.currentUser;
@@ -440,6 +495,23 @@ class FirestoreService {
   Future<void> addNotification(String userId, String title, String body,
       {String? contributorDocId, String? receiverDocId}) async {
     try {
+      String? imageUrl;
+      if (title == 'Potential Volunteer Found') {
+        imageUrl = 'assets/icon/pathpal_logo.png';
+      } else if (title == 'New Contact Request' ||
+          title == 'A Fellow Receiver Contacted You') {
+        if (receiverDocId != null) {
+          final receiverDoc =
+              await _firestore.collection('receivers').doc(receiverDocId).get();
+          final receiverUserId = receiverDoc.data()?['userId'];
+          if (receiverUserId != null) {
+            final userDoc =
+                await _firestore.collection('users').doc(receiverUserId).get();
+            imageUrl = userDoc.data()?['profile_picture'];
+          }
+        }
+      }
+
       await _firestore.collection('notifications').add({
         'userId': userId,
         'title': title,
@@ -448,9 +520,28 @@ class FirestoreService {
         'read': false,
         if (contributorDocId != null) 'contributorId': contributorDocId,
         if (receiverDocId != null) 'receiverId': receiverDocId,
+        if (imageUrl != null) 'imageUrl': imageUrl,
       });
     } catch (e) {
       print('Error adding notification: $e');
+      rethrow;
+    }
+  }
+
+  Future<void> deleteNotificationsForContributor(String contributorId) async {
+    try {
+      final querySnapshot = await _firestore
+          .collection('notifications')
+          .where('contributorId', isEqualTo: contributorId)
+          .get();
+
+      final batch = _firestore.batch();
+      for (var doc in querySnapshot.docs) {
+        batch.delete(doc.reference);
+      }
+      await batch.commit();
+    } catch (e) {
+      print('Error deleting notifications for contributor: $e');
       rethrow;
     }
   }

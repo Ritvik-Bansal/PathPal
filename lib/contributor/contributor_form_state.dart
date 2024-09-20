@@ -12,7 +12,9 @@ class ContributorFormState {
   Airport? layoverAirport;
   bool hasLayover = false;
   String email = '';
-  DateTime? flightDateTime;
+  DateTime? flightDateTimeFirstLeg;
+  DateTime? flightDateTimeSecondLeg;
+  String userid = '';
 
   String get flightNumber => hasLayover ? flightNumberFirstLeg : _flightNumber;
   set flightNumber(String value) {
@@ -56,13 +58,19 @@ class ContributorFormState {
     hasLayover = true;
   }
 
-  void updateFlightDateTime(DateTime dateTime) {
-    flightDateTime = dateTime;
+  void updateFlightDateTimeFirstLeg(DateTime dateTime) {
+    flightDateTimeFirstLeg = dateTime;
+  }
+
+  void updateFlightDateTimeSecondLeg(DateTime dateTime) {
+    flightDateTimeSecondLeg = dateTime;
   }
 
   void removeLayover() {
     layoverAirport = null;
     hasLayover = false;
+    flightNumberSecondLeg = '';
+    flightDateTimeSecondLeg = null;
   }
 
   void setUserContactInfo(String userEmail) {
@@ -76,13 +84,14 @@ class ContributorFormState {
           departureAirport != null &&
           arrivalAirport != null &&
           layoverAirport != null &&
-          flightDateTime != null &&
+          flightDateTimeFirstLeg != null &&
+          flightDateTimeSecondLeg != null &&
           partySize > 0;
     } else {
       return flightNumber.isNotEmpty &&
           departureAirport != null &&
           arrivalAirport != null &&
-          flightDateTime != null &&
+          flightDateTimeFirstLeg != null &&
           partySize > 0;
     }
   }
@@ -112,7 +121,11 @@ class ContributorFormState {
           : null
       ..hasLayover = hasLayover
       ..email = map['userEmail'] ?? ''
-      ..flightDateTime = (map['flightDateTime'] as Timestamp?)?.toDate();
+      ..flightDateTimeFirstLeg =
+          (map['flightDateTimeFirstLeg'] as Timestamp?)?.toDate()
+      ..flightDateTimeSecondLeg = hasLayover
+          ? (map['flightDateTimeSecondLeg'] as Timestamp?)?.toDate()
+          : null;
 
     return state;
   }
@@ -125,13 +138,17 @@ class ContributorFormState {
       'arrivalAirport': arrivalAirport?.toJson(),
       'hasLayover': hasLayover,
       'userEmail': email,
-      'flightDateTime':
-          flightDateTime != null ? Timestamp.fromDate(flightDateTime!) : null,
+      'flightDateTimeFirstLeg': flightDateTimeFirstLeg != null
+          ? Timestamp.fromDate(flightDateTimeFirstLeg!)
+          : null,
     };
 
     if (hasLayover) {
       map['flightNumberSecondLeg'] = flightNumberSecondLeg;
       map['layoverAirport'] = layoverAirport?.toJson();
+      map['flightDateTimeSecondLeg'] = flightDateTimeSecondLeg != null
+          ? Timestamp.fromDate(flightDateTimeSecondLeg!)
+          : null;
     }
     return map;
   }
@@ -160,6 +177,10 @@ class ContributorFormState {
         : null;
     hasLayover = map['hasLayover'] ?? false;
     email = map['userEmail'] ?? '';
-    flightDateTime = (map['flightDateTime'] as Timestamp?)?.toDate();
+    flightDateTimeFirstLeg =
+        (map['flightDateTimeFirstLeg'] as Timestamp?)?.toDate();
+    flightDateTimeSecondLeg = hasLayover
+        ? (map['flightDateTimeSecondLeg'] as Timestamp?)?.toDate()
+        : null;
   }
 }

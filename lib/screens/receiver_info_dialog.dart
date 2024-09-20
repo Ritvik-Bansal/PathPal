@@ -41,8 +41,9 @@ class ReceiverInfoDialog extends StatelessWidget {
 
         if (!snapshot.hasData || !snapshot.data!.exists) {
           return AlertDialog(
-            title: const Text('Not Found'),
-            content: const Text('User information not found.'),
+            title: const Text('No Longer Found'),
+            content: const Text(
+                'User information no longer found. Please check your email for details about this match'),
             actions: [
               TextButton(
                 child: const Text('Close'),
@@ -55,9 +56,8 @@ class ReceiverInfoDialog extends StatelessWidget {
         final data = snapshot.data!.data() as Map<String, dynamic>;
 
         return AlertDialog(
-          title: Text(isContributor
-              ? 'Contributor Information'
-              : 'Receiver Information'),
+          title: Text(
+              isContributor ? 'Volunteer Information' : 'Receiver Information'),
           content: SingleChildScrollView(
             child: ListBody(
               children: <Widget>[
@@ -76,8 +76,8 @@ class ReceiverInfoDialog extends StatelessWidget {
                       data['departureAirport']?['name'] ?? 'N/A'),
                   _buildInfoRow('Arrival Airport',
                       data['arrivalAirport']?['name'] ?? 'N/A'),
-                  _buildInfoRow(
-                      'Flight Date', _formatDate(data['flightDateTime'])),
+                  _buildInfoRow('Flight Date',
+                      _formatDate(data['flightDateTimeFirstLeg'])),
                 ],
               ],
             ),

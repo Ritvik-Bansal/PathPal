@@ -70,7 +70,7 @@ class ContactUsScreen extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        height: 180, // Fixed height for uniformity
+        height: 180,
         padding: const EdgeInsets.all(20),
         decoration: BoxDecoration(
           border: Border.all(

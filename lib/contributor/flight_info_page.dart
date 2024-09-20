@@ -13,10 +13,11 @@ class FlightInfoPage extends StatefulWidget {
   final Function(Airport) onArrivalAirportSelected;
   final Function(Airport) onLayoverAirportSelected;
   final Function(bool) onLayoverToggled;
-  final Function(DateTime) onFlightDateTimeUpdated;
+  final Function(DateTime) onFlightDateTimeFirstLegUpdated;
+  final Function(DateTime) onFlightDateTimeSecondLegUpdated;
 
   const FlightInfoPage({
-    super.key,
+    Key? key,
     required this.formState,
     required this.onFlightNumberUpdated,
     required this.onFlightNumberFirstLegUpdated,
@@ -26,8 +27,9 @@ class FlightInfoPage extends StatefulWidget {
     required this.onArrivalAirportSelected,
     required this.onLayoverAirportSelected,
     required this.onLayoverToggled,
-    required this.onFlightDateTimeUpdated,
-  });
+    required this.onFlightDateTimeFirstLegUpdated,
+    required this.onFlightDateTimeSecondLegUpdated,
+  }) : super(key: key);
 
   @override
   _FlightInfoPageState createState() => _FlightInfoPageState();
@@ -105,11 +107,14 @@ class _FlightInfoPageState extends State<FlightInfoPage> {
     );
   }
 
-  Future<void> _selectDateTime(BuildContext context) async {
+  Future<void> _selectDateTime(BuildContext context,
+      {bool isSecondLeg = false}) async {
     final DateTime now = DateTime.now();
     final DateTime? pickedDate = await showDatePicker(
       context: context,
-      initialDate: widget.formState.flightDateTime ?? now,
+      initialDate: isSecondLeg
+          ? widget.formState.flightDateTimeSecondLeg ?? now
+          : widget.formState.flightDateTimeFirstLeg ?? now,
       firstDate: now,
       lastDate: DateTime(2100),
     );
@@ -118,8 +123,9 @@ class _FlightInfoPageState extends State<FlightInfoPage> {
       final TimeOfDay? pickedTime = await showTimePicker(
         context: context,
         initialEntryMode: TimePickerEntryMode.input,
-        initialTime:
-            TimeOfDay.fromDateTime(widget.formState.flightDateTime ?? now),
+        initialTime: TimeOfDay.fromDateTime(isSecondLeg
+            ? widget.formState.flightDateTimeSecondLeg ?? now
+            : widget.formState.flightDateTimeFirstLeg ?? now),
         builder: (BuildContext context, Widget? child) {
           return Theme(
             data: Theme.of(context).copyWith(
@@ -140,7 +146,11 @@ class _FlightInfoPageState extends State<FlightInfoPage> {
           pickedTime.hour,
           pickedTime.minute,
         );
-        widget.onFlightDateTimeUpdated(pickedDateTime);
+        if (isSecondLeg) {
+          widget.onFlightDateTimeSecondLegUpdated(pickedDateTime);
+        } else {
+          widget.onFlightDateTimeFirstLegUpdated(pickedDateTime);
+        }
       }
     }
   }
@@ -239,7 +249,7 @@ class _FlightInfoPageState extends State<FlightInfoPage> {
                 ],
               ),
             const SizedBox(height: 32),
-            if (!widget.formState.hasLayover)
+            if (!widget.formState.hasLayover) ...[
               TextFormField(
                 controller: _flightNumberController,
                 autocorrect: false,
@@ -250,6 +260,22 @@ class _FlightInfoPageState extends State<FlightInfoPage> {
                 ),
                 onChanged: (value) => _handleFlightNumberChange(value),
               ),
+              const SizedBox(height: 16.0),
+              TextFormField(
+                readOnly: true,
+                controller: TextEditingController(
+                  text: widget.formState.flightDateTimeFirstLeg != null
+                      ? "${widget.formState.flightDateTimeFirstLeg!.toLocal().toString().split(' ')[0]} ${TimeOfDay.fromDateTime(widget.formState.flightDateTimeFirstLeg!).format(context)}"
+                      : '',
+                ),
+                decoration: const InputDecoration(
+                  labelText: 'Flight Date and Time',
+                  hintText: 'Select your flight date and time',
+                  border: OutlineInputBorder(),
+                ),
+                onTap: () => _selectDateTime(context),
+              ),
+            ],
             if (widget.formState.hasLayover) ...[
               TextFormField(
                 controller: _flightNumberFirstLegController,
@@ -265,6 +291,21 @@ class _FlightInfoPageState extends State<FlightInfoPage> {
               ),
               const SizedBox(height: 16.0),
               TextFormField(
+                readOnly: true,
+                controller: TextEditingController(
+                  text: widget.formState.flightDateTimeFirstLeg != null
+                      ? "${widget.formState.flightDateTimeFirstLeg!.toLocal().toString().split(' ')[0]} ${TimeOfDay.fromDateTime(widget.formState.flightDateTimeFirstLeg!).format(context)}"
+                      : '',
+                ),
+                decoration: const InputDecoration(
+                  labelText: 'Flight Date and Time (First Leg)',
+                  hintText: 'Select your flight date and time',
+                  border: OutlineInputBorder(),
+                ),
+                onTap: () => _selectDateTime(context),
+              ),
+              const SizedBox(height: 16.0),
+              TextFormField(
                 controller: _flightNumberSecondLegController,
                 autocorrect: false,
                 decoration: const InputDecoration(
@@ -276,22 +317,23 @@ class _FlightInfoPageState extends State<FlightInfoPage> {
                 onChanged: (value) =>
                     _handleFlightNumberChange(value, isSecondLeg: true),
               ),
+              const SizedBox(height: 16.0),
+              TextFormField(
+                readOnly: true,
+                controller: TextEditingController(
+                  text: widget.formState.flightDateTimeSecondLeg != null
+                      ? "${widget.formState.flightDateTimeSecondLeg!.toLocal().toString().split(' ')[0]} ${TimeOfDay.fromDateTime(widget.formState.flightDateTimeSecondLeg!).format(context)}"
+                      : '',
+                ),
+                decoration: const InputDecoration(
+                  labelText: 'Flight Date and Time (Second Leg)',
+                  hintText:
+                      'Select your flight date and time for the second leg',
+                  border: OutlineInputBorder(),
+                ),
+                onTap: () => _selectDateTime(context, isSecondLeg: true),
+              ),
             ],
-            const SizedBox(height: 16.0),
-            TextFormField(
-              readOnly: true,
-              controller: TextEditingController(
-                text: widget.formState.flightDateTime != null
-                    ? "${widget.formState.flightDateTime!.toLocal().toString().split(' ')[0]} ${TimeOfDay.fromDateTime(widget.formState.flightDateTime!).format(context)}"
-                    : '',
-              ),
-              decoration: const InputDecoration(
-                labelText: 'Flight Date and Time',
-                hintText: 'Select your flight date and time',
-                border: OutlineInputBorder(),
-              ),
-              onTap: () => _selectDateTime(context),
-            ),
             const SizedBox(height: 16.0),
             TextFormField(
               initialValue: widget.formState.partySize.toString(),

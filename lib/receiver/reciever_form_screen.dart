@@ -9,7 +9,16 @@ import 'package:pathpal/services/firestore_service.dart';
 import 'package:country_picker/country_picker.dart';
 
 class RecieverFormScreen extends StatefulWidget {
-  const RecieverFormScreen({super.key});
+  final Map<String, dynamic>? existingData;
+  final String? docId;
+  final bool isEditing;
+
+  const RecieverFormScreen({
+    super.key,
+    this.existingData,
+    this.docId,
+    this.isEditing = false,
+  });
 
   @override
   _RecieverFormScreenState createState() => _RecieverFormScreenState();
@@ -30,8 +39,20 @@ class _RecieverFormScreenState extends State<RecieverFormScreen> {
   void initState() {
     super.initState();
     _initializeCountry();
-    _loadExistingForm();
+    if (widget.isEditing && widget.existingData != null) {
+      _loadExistingData(widget.existingData!);
+    } else {
+      _loadExistingForm();
+    }
     _formState.updateReason('I am elderly');
+  }
+
+  void _loadExistingData(Map<String, dynamic> data) {
+    setState(() {
+      _formState.updateFromMap(data);
+      int num = _formState.phoneNumber.trim().indexOf(" ");
+      _phone = _formState.phoneNumber.trim().substring(num + 1);
+    });
   }
 
   void _initializeCountry() async {
@@ -376,19 +397,22 @@ class _RecieverFormScreenState extends State<RecieverFormScreen> {
     }
 
     try {
-      await _firestoreService.submitReceiverForm(_formState);
-      ScaffoldMessenger.of(context).clearSnackBars();
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Form submitted successfully')),
-      );
-      Navigator.of(context).pushReplacement(
-        MaterialPageRoute(
-          builder: (context) =>
-              FilteredContributorsScreen(receiverFormState: _formState),
-        ),
-      );
+      if (widget.isEditing) {
+        await _firestoreService.updateTentativeReceiver(
+            widget.docId!, _formState);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+              content: Text('Tentative request updated successfully')),
+        );
+      } else {
+        await _firestoreService.addOrUpdateTentativeReceiver(_formState);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+              content: Text('Tentative request submitted successfully')),
+        );
+      }
+      Navigator.of(context).pop();
     } catch (e) {
-      ScaffoldMessenger.of(context).clearSnackBars();
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Error submitting form: $e')),
       );

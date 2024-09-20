@@ -9,6 +9,7 @@ import 'dart:convert';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'dart:math' as math;
+import 'package:pathpal/widgets/map_widget.dart';
 
 import 'package:pathpal/services/firestore_service.dart';
 
@@ -35,6 +36,13 @@ class _ContributorDetailScreenState extends State<ContributorDetailScreen> {
   bool _isFavorite = false;
   bool _hasContacted = false;
   late FirestoreService _firestoreService;
+  bool mounted = true;
+
+  @override
+  void dispose() {
+    mounted = false;
+    super.dispose();
+  }
 
   @override
   void initState() {
@@ -95,7 +103,7 @@ class _ContributorDetailScreenState extends State<ContributorDetailScreen> {
         }
 
         if (!snapshot.hasData || snapshot.data!.length != 2) {
-          return _buildLoadingScaffold(context, 'Contributor not found');
+          return _buildLoadingScaffold(context, 'Volunteer not found');
         }
 
         var contributorData = snapshot.data![0].data() as Map<String, dynamic>;
@@ -146,7 +154,7 @@ class _ContributorDetailScreenState extends State<ContributorDetailScreen> {
               const Padding(
                 padding: EdgeInsets.all(8.0),
                 child: Text(
-                  'You have already contacted this contributor',
+                  'You have already contacted this volunteer',
                   style: TextStyle(
                     color: Colors.green,
                     fontWeight: FontWeight.bold,
@@ -155,7 +163,7 @@ class _ContributorDetailScreenState extends State<ContributorDetailScreen> {
               ),
             _buildFlightRoute(contributorData),
             const SizedBox(height: 10),
-            _buildMapWidget(contributorData),
+            MapWidget(contributorData: contributorData),
             const SizedBox(height: 10),
             OutlinedButton(
               onPressed: () => _showContactConfirmationDialog(
@@ -170,8 +178,8 @@ class _ContributorDetailScreenState extends State<ContributorDetailScreen> {
                     const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
               ),
               child: Text(_hasContacted
-                  ? 'CONTACT CONTRIBUTOR AGAIN'
-                  : 'CONTACT THIS CONTRIBUTOR'),
+                  ? 'CONTACT VOLUNTEER AGAIN'
+                  : 'CONTACT THIS VOLUNTEER'),
             ),
             const SizedBox(height: 30),
           ],
@@ -331,7 +339,7 @@ class _ContributorDetailScreenState extends State<ContributorDetailScreen> {
           backgroundColor: Theme.of(context).colorScheme.surface,
           title: const Text('Contact Confirmation'),
           content: const Text(
-            'PathPal will email the contributor with your contact info and travel details. They will directly reach out to you. Do you wish to proceed?',
+            'PathPal will email the volunteer with your contact info and travel details. They will directly reach out to you. Do you wish to proceed?',
           ),
           actions: <Widget>[
             TextButton(
@@ -360,10 +368,12 @@ class _ContributorDetailScreenState extends State<ContributorDetailScreen> {
     final User? currentUser = auth.currentUser;
 
     if (currentUser == null) {
-      ScaffoldMessenger.of(context).clearSnackBars();
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Error: User not logged in')),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).clearSnackBars();
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Error: User not logged in')),
+        );
+      }
       return;
     }
 
@@ -377,13 +387,13 @@ class _ContributorDetailScreenState extends State<ContributorDetailScreen> {
 
       if (!userSnapshot.exists) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Error: Contributor data not found')),
+          const SnackBar(content: Text('Error: volunteer data not found')),
         );
         return;
       }
 
       final contributorName =
-          userSnapshot.data()?['name'] ?? 'PathPal Contributor';
+          userSnapshot.data()?['name'] ?? 'PathPal volunteer';
 
       final receiverSnapshot = await FirebaseFirestore.instance
           .collection('receivers')
@@ -479,25 +489,28 @@ class _ContributorDetailScreenState extends State<ContributorDetailScreen> {
           ]
         }),
       );
-
       if (response.statusCode == 200) {
         await _firestoreService.addContactedContributor(widget.contributorId);
-        setState(() {
-          _hasContacted = true;
-        });
-        ScaffoldMessenger.of(context).clearSnackBars();
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-              content: Text('Email sent to the contributor successfully')),
-        );
+        if (mounted) {
+          setState(() {
+            _hasContacted = true;
+          });
+          ScaffoldMessenger.of(context).clearSnackBars();
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+                content: Text('Email sent to the contributor successfully')),
+          );
+        }
       } else {
         throw Exception('Failed to send email: ${response.body}');
       }
     } catch (e) {
       print('Error sending email: $e');
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Error sending email to the contributor')),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Error sending email to the volunteer')),
+        );
+      }
     }
   }
 
@@ -528,10 +541,19 @@ class _ContributorDetailScreenState extends State<ContributorDetailScreen> {
     String? airline2 = contributorData['flightNumberSecondLeg'] != null
         ? _getAirlineName(contributorData['flightNumberSecondLeg'])
         : null;
-    String flightDate =
-        _formatDate(contributorData['flightDateTime'] as Timestamp);
-    String flightTime =
-        _formatTime(contributorData['flightDateTime'] as Timestamp);
+    String flightOneDate =
+        _formatDate(contributorData['flightDateTimeFirstLeg'] as Timestamp);
+    String flightOneTime =
+        _formatTime(contributorData['flightDateTimeFirstLeg'] as Timestamp);
+
+    String? flightTwoDate;
+    String? flightTwoTime;
+    if (contributorData['flightDateTimeSecondLeg'] != null) {
+      flightTwoDate =
+          _formatDate(contributorData['flightDateTimeSecondLeg'] as Timestamp);
+      flightTwoTime =
+          _formatTime(contributorData['flightDateTimeSecondLeg'] as Timestamp);
+    }
 
     return Column(
       children: [
@@ -539,15 +561,19 @@ class _ContributorDetailScreenState extends State<ContributorDetailScreen> {
           'Flight Route and Details',
           style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
         ),
-        if (layoverCode != null) ...[
+        if (layoverCode != null &&
+            flightTwoDate != null &&
+            flightTwoTime != null) ...[
           _buildFlightLeg(
             departureCode,
             layoverCode,
             airline1,
             contributorData['flightNumberFirstLeg'],
-            flightDate,
-            flightTime,
+            flightOneDate,
+            flightOneTime,
             isFirstLeg: true,
+            fromFull: contributorData['departureAirport']['name'],
+            toFull: contributorData['layoverAirport']['name'],
           ),
           const SizedBox(height: 10),
           _buildFlightLeg(
@@ -555,10 +581,11 @@ class _ContributorDetailScreenState extends State<ContributorDetailScreen> {
             arrivalCode,
             airline2 ?? airline1,
             contributorData['flightNumberSecondLeg'] ?? '',
-            '',
-            '',
+            flightTwoDate,
+            flightTwoTime,
             isFirstLeg: false,
-            layoverInfo: _getAirportInfo(contributorData['layoverAirport']),
+            fromFull: contributorData['layoverAirport']['name'],
+            toFull: contributorData['arrivalAirport']['name'],
           ),
         ] else
           _buildFlightLeg(
@@ -566,17 +593,27 @@ class _ContributorDetailScreenState extends State<ContributorDetailScreen> {
             arrivalCode,
             airline1,
             contributorData['flightNumberFirstLeg'],
-            flightDate,
-            flightTime,
+            flightOneDate,
+            flightOneTime,
             isFirstLeg: true,
+            fromFull: contributorData['departureAirport']['name'],
+            toFull: contributorData['arrivalAirport']['name'],
           ),
       ],
     );
   }
 
-  Widget _buildFlightLeg(String from, String to, String airline,
-      String flightNumber, String date, String time,
-      {required bool isFirstLeg, String? layoverInfo}) {
+  Widget _buildFlightLeg(
+    String from,
+    String to,
+    String airline,
+    String flightNumber,
+    String date,
+    String time, {
+    required bool isFirstLeg,
+    required String fromFull,
+    required String toFull,
+  }) {
     String airlineIataCode = flightNumber.substring(0, 2).toUpperCase();
     String airlineLogoUrl =
         'https://airlabs.co/img/airline/m/$airlineIataCode.png';
@@ -591,6 +628,12 @@ class _ContributorDetailScreenState extends State<ContributorDetailScreen> {
       ),
       child: Column(
         children: [
+          Text(
+            '$fromFull to $toFull',
+            style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 10),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceEvenly,
             children: [
@@ -638,21 +681,10 @@ class _ContributorDetailScreenState extends State<ContributorDetailScreen> {
           Column(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              if (layoverInfo != null)
-                Text(
-                  'Layover: $layoverInfo',
-                  style: const TextStyle(fontSize: 16),
-                ),
-              if (isFirstLeg) ...[
-                Text(
-                  'Date: $date',
-                  style: const TextStyle(fontSize: 16),
-                ),
-                Text(
-                  'Time: $time',
-                  style: const TextStyle(fontSize: 16),
-                ),
-              ],
+              Text(
+                'Date & Time: $date, $time',
+                style: const TextStyle(fontSize: 16),
+              ),
             ],
           ),
         ],
