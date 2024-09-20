@@ -1,7 +1,6 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:flutter/material.dart';
-import 'package:pathpal/contributor/filtered_contributors_screen.dart';
 import 'package:pathpal/receiver/receiver_form_state.dart';
 import 'package:pathpal/receiver/date_selection_page.dart';
 import 'package:pathpal/receiver/airport_selection_page.dart';
