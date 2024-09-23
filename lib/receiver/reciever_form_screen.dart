@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:flutter/material.dart';
+import 'package:pathpal/contributor/filtered_contributors_screen.dart';
 import 'package:pathpal/receiver/receiver_form_state.dart';
 import 'package:pathpal/receiver/date_selection_page.dart';
 import 'package:pathpal/receiver/airport_selection_page.dart';
@@ -403,14 +404,25 @@ class _RecieverFormScreenState extends State<RecieverFormScreen> {
           const SnackBar(
               content: Text('Tentative request updated successfully')),
         );
+        Navigator.of(context).pop();
       } else {
-        await _firestoreService.addOrUpdateTentativeReceiver(_formState);
+        await _firestoreService.submitReceiverForm(_formState);
+        ScaffoldMessenger.of(context).clearSnackBars();
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-              content: Text('Tentative request submitted successfully')),
+          const SnackBar(content: Text('Form submitted successfully')),
         );
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(
+            builder: (context) =>
+                FilteredContributorsScreen(receiverFormState: _formState),
+          ),
+        );
+        // await _firestoreService.addOrUpdateTentativeReceiver(_formState);
+        // ScaffoldMessenger.of(context).showSnackBar(
+        //   const SnackBar(
+        //       content: Text('Tentative request submitted successfully')),
+        // );
       }
-      Navigator.of(context).pop();
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Error submitting form: $e')),

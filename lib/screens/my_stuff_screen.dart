@@ -48,46 +48,43 @@ class _MyStuffScreenState extends State<MyStuffScreen> {
       appBar: AppBar(
         title: const Text('My Trips'),
       ),
-      body: SingleChildScrollView(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            FutureBuilder<List<Widget>>(
-              future: Future.wait([
-                _buildContributorForms(),
-                _buildFavoritedContributors(),
-                _buildTentativeRequests(),
-              ]),
-              builder: (context, snapshot) {
-                if (snapshot.connectionState == ConnectionState.waiting) {
-                  return Center(child: CircularProgressIndicator());
-                }
-                if (snapshot.hasError) {
-                  return Center(child: Text('Error: ${snapshot.error}'));
-                }
-                List<Widget> widgets = snapshot.data ?? [];
+      body: FutureBuilder<List<Widget>>(
+        future: Future.wait([
+          _buildContributorForms(),
+          _buildFavoritedContributors(),
+          _buildTentativeRequests(),
+        ]),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
+          }
+          if (snapshot.hasError) {
+            return Center(child: Text('Error: ${snapshot.error}'));
+          }
+          List<Widget> widgets = snapshot.data ?? [];
 
-                widgets.removeWhere(
-                    (widget) => widget is SizedBox && widget.height == 0);
+          widgets.removeWhere(
+              (widget) => widget is SizedBox && widget.height == 0);
 
-                if (widgets.isEmpty) {
-                  return Center(
-                    child: Padding(
-                      padding: const EdgeInsets.all(16.0),
-                      child: Text(
-                        'You have no volunteer forms, favorited trips, or tentative requests.',
-                        style: TextStyle(
-                            fontSize: 16, fontStyle: FontStyle.italic),
-                        textAlign: TextAlign.center,
-                      ),
+          if (widgets.isEmpty) {
+            return CustomScrollView(
+              slivers: [
+                SliverFillRemaining(
+                  hasScrollBody: false,
+                  child: Center(
+                    child: Text(
+                      'You have no offerings, favorites, or requests.',
+                      textAlign: TextAlign.center,
                     ),
-                  );
-                }
-                return Column(children: widgets);
-              },
-            ),
-          ],
-        ),
+                  ),
+                ),
+              ],
+            );
+          }
+          return SingleChildScrollView(
+            child: Column(children: widgets),
+          );
+        },
       ),
     );
   }
@@ -273,6 +270,7 @@ class _MyStuffScreenState extends State<MyStuffScreen> {
                         content: Text('Error deleting tentative request')),
                   );
                 }
+                setState(() {});
               },
             ),
           ],
@@ -606,20 +604,15 @@ class FavoritedContributorCard extends StatelessWidget {
     String? via = contributorData['layoverAirport']?['iata'];
     DateTime flightDate =
         (contributorData['flightDateTimeFirstLeg'] as Timestamp).toDate();
-    String formattedDate = DateFormat('MMM d').format(flightDate);
 
-    String flightInfo = '$from to $to';
+    String flightRoute = '$from to $to';
     if (via != null) {
-      flightInfo += ' via $via';
+      flightRoute += ' via $via';
     }
-    flightInfo += ' on $formattedDate';
-
-    String flightNumber = contributorData['flightNumberFirstLeg'] ?? 'N/A';
-    String airlineName = _getAirlineName(flightNumber);
 
     return Container(
-      padding: const EdgeInsets.symmetric(vertical: 15, horizontal: 10),
-      margin: const EdgeInsets.all(10),
+      padding: const EdgeInsets.symmetric(vertical: 15, horizontal: 5),
+      margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
       decoration: BoxDecoration(
         border: Border.all(
           color: const Color.fromARGB(255, 180, 221, 255),
@@ -644,7 +637,9 @@ class FavoritedContributorCard extends StatelessWidget {
         },
         child: Row(
           children: [
+            const SizedBox(width: 5),
             const CircleAvatar(
+              backgroundColor: Color.fromARGB(255, 180, 221, 255),
               child: Icon(Icons.flight),
             ),
             const SizedBox(width: 16),
@@ -653,31 +648,31 @@ class FavoritedContributorCard extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    flightInfo,
+                    flightRoute,
                     style: const TextStyle(
                         fontWeight: FontWeight.bold, fontSize: 18),
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    '$airlineName - Flight: $flightNumber',
+                    DateFormat("MMM d, yyyy':' h:mm a").format(flightDate),
                     style: const TextStyle(fontSize: 16),
                   ),
                 ],
               ),
             ),
-            IconButton(
-              icon: const Icon(Icons.favorite, color: Colors.red),
-              onPressed: onUnfavorite,
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                IconButton(
+                  icon: const Icon(Icons.favorite, color: Colors.red),
+                  onPressed: onUnfavorite,
+                ),
+              ],
             ),
           ],
         ),
       ),
     );
-  }
-
-  String _getAirlineName(String flightNumber) {
-    String iataCode = flightNumber.substring(0, 2).toUpperCase();
-    return airlineFetcher.getAirlineName(iataCode) ?? 'Unknown Airline';
   }
 }
 

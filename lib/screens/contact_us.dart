@@ -55,9 +55,9 @@ class ContactUsScreen extends StatelessWidget {
               ),
               const SizedBox(height: 20),
               _buildSocialMediaOption('Instagram', '@path_pal • Account Tag',
-                  'assets/images/instagram.png', () {}, context),
+                  'assets/images/instagram.png', _launchInstagram, context),
               _buildSocialMediaOption('Facebook', '@PathPal • Facebook Page',
-                  'assets/images/facebook.png', () {}, context),
+                  'assets/images/facebook.png', _launchFacebook, context),
             ],
           ),
         ),
@@ -140,6 +140,26 @@ class ContactUsScreen extends StatelessWidget {
       await launchUrl(emailLaunchUri);
     } else {
       throw 'Could not launch email';
+    }
+  }
+
+  Future<void> _launchInstagram() async {
+    const String instagramUrl = 'https://www.instagram.com/path_pal';
+    if (await canLaunchUrl(Uri.parse(instagramUrl))) {
+      await launchUrl(Uri.parse(instagramUrl),
+          mode: LaunchMode.externalApplication);
+    } else {
+      throw 'Could not launch Instagram';
+    }
+  }
+
+  Future<void> _launchFacebook() async {
+    const String facebookUrl = 'https://m.facebook.com/61563851220198/';
+    if (await canLaunchUrl(Uri.parse(facebookUrl))) {
+      await launchUrl(Uri.parse(facebookUrl),
+          mode: LaunchMode.externalApplication);
+    } else {
+      throw 'Could not launch Facebook';
     }
   }
 }

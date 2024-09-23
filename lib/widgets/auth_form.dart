@@ -4,9 +4,8 @@ import 'package:country_picker/country_picker.dart';
 import 'package:pathpal/screens/learn_more.dart';
 import 'package:pathpal/screens/privacy_policy_screen.dart';
 import 'package:pathpal/screens/terms_conditions_screen.dart';
-// import 'package:pathpal/services/apple_auth_flow.dart';
-// import 'package:pathpal/widgets/login_tile.dart';
-// import 'package:pathpal/services/google_auth_flow.dart';
+import 'package:pathpal/services/google_auth_flow.dart';
+import 'package:pathpal/widgets/login_tile.dart';
 
 class AuthForm extends StatefulWidget {
   final bool isLogin;
@@ -39,6 +38,7 @@ class _AuthFormState extends State<AuthForm> {
   var _enteredName = "";
   var _passwordVisible = false;
   Country? country;
+  final GoogleAuthFlow _googleAuthFlow = GoogleAuthFlow();
 
   @override
   void initState() {
@@ -55,6 +55,19 @@ class _AuthFormState extends State<AuthForm> {
   void _safeSetState(VoidCallback fn) {
     if (_isMounted) {
       setState(fn);
+    }
+  }
+
+  Future<void> _handleGoogleSignIn() async {
+    _safeSetState(() {});
+
+    try {
+      final user = await _googleAuthFlow.startAuthFlow(context);
+      if (user != null) {
+        print('Successfully signed in with Google: ${user.displayName}');
+      }
+    } finally {
+      _safeSetState(() {});
     }
   }
 
@@ -83,7 +96,7 @@ class _AuthFormState extends State<AuthForm> {
     return Card(
       elevation: 0,
       color: Theme.of(context).colorScheme.surface,
-      margin: const EdgeInsets.all(10),
+      margin: const EdgeInsets.only(bottom: 0, right: 10, left: 10, top: 10),
       child: Padding(
         padding: const EdgeInsets.all(20),
         child: Form(
@@ -138,6 +151,14 @@ class _AuthFormState extends State<AuthForm> {
                   _enteredPassword = value;
                 },
               ),
+              if (widget.isLogin)
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: TextButton(
+                    onPressed: widget.onForgotPassword,
+                    child: const Text("Forgot Password?"),
+                  ),
+                ),
               if (!widget.isLogin)
                 TextFormField(
                   decoration: InputDecoration(
@@ -240,21 +261,24 @@ class _AuthFormState extends State<AuthForm> {
                         ),
                       ),
                     ),
+                    SizedBox(height: 20),
                   ],
                 ),
-              const SizedBox(height: 20),
               if (widget.isAuthenticating)
                 CircularProgressIndicator(
                   backgroundColor: Theme.of(context).colorScheme.surface,
                 )
               else
-                ElevatedButton(
-                  onPressed: _trySubmit,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor:
-                        Theme.of(context).colorScheme.primaryContainer,
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: _trySubmit,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor:
+                          Theme.of(context).colorScheme.primaryContainer,
+                    ),
+                    child: Text(widget.isLogin ? "LOGIN" : "SIGN UP"),
                   ),
-                  child: Text(widget.isLogin ? "LOGIN" : "SIGN UP"),
                 ),
               const SizedBox(height: 10),
               Row(
@@ -264,7 +288,7 @@ class _AuthFormState extends State<AuthForm> {
                   if (widget.isLogin) ...[
                     TextButton(
                       onPressed: () {
-                        Navigator.pushReplacement(
+                        Navigator.push(
                           context,
                           MaterialPageRoute(
                               builder: (context) => const LearnMoreScreen()),
@@ -280,11 +304,48 @@ class _AuthFormState extends State<AuthForm> {
                   ),
                 ],
               ),
-              if (widget.isLogin)
-                TextButton(
-                  onPressed: widget.onForgotPassword,
-                  child: const Text("Forgot Password?"),
+              if (widget.isLogin) ...[
+                const SizedBox(height: 10),
+                Row(
+                  children: [
+                    Expanded(
+                      child: Divider(
+                        color: Theme.of(context)
+                            .colorScheme
+                            .onSurface
+                            .withOpacity(0.3),
+                      ),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      child: Text(
+                        'Or login with',
+                        style: TextStyle(
+                          color: Theme.of(context)
+                              .colorScheme
+                              .onSurface
+                              .withOpacity(0.6),
+                        ),
+                      ),
+                    ),
+                    Expanded(
+                      child: Divider(
+                        color: Theme.of(context)
+                            .colorScheme
+                            .onSurface
+                            .withOpacity(0.3),
+                      ),
+                    ),
+                  ],
                 ),
+                const SizedBox(height: 20),
+                LoginTile(
+                  imagePath: 'assets/images/google_logo.png',
+                  onTap: _handleGoogleSignIn,
+                  title: 'Sign in with Google',
+                ),
+                const SizedBox(height: 20),
+              ]
             ],
           ),
         ),

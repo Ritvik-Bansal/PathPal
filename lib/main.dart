@@ -1,3 +1,4 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
@@ -5,6 +6,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:pathpal/data/airport_database.dart';
 import 'package:pathpal/screens/auth.dart';
+import 'package:pathpal/screens/full_name.dart';
 import 'package:pathpal/screens/tabs.dart';
 import 'package:pathpal/screens/email_verification_screen.dart';
 // import 'package:pathpal/services/fcm_service.dart';
@@ -47,6 +49,9 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      routes: {
+        '/home': (context) => const Tabs(),
+      },
       debugShowCheckedModeBanner: false,
       title: 'PathPal',
       theme: ThemeData().copyWith(
@@ -65,33 +70,46 @@ class MyApp extends StatelessWidget {
         stream: FirebaseAuth.instance.authStateChanges(),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
-            return Scaffold(
-              backgroundColor: Theme.of(context).colorScheme.surface,
-              body: const Center(child: CircularProgressIndicator()),
-            );
+            return _buildLoadingScreen();
           }
           if (snapshot.hasData) {
-            return FutureBuilder<User?>(
-              future: FirebaseAuth.instance.currentUser
-                  ?.reload()
-                  .then((_) => FirebaseAuth.instance.currentUser),
+            return FutureBuilder<DocumentSnapshot>(
+              future: FirebaseFirestore.instance
+                  .collection('users')
+                  .doc(snapshot.data!.uid)
+                  .get(),
               builder: (context, userSnapshot) {
                 if (userSnapshot.connectionState == ConnectionState.waiting) {
-                  return Scaffold(
-                    backgroundColor: Theme.of(context).colorScheme.surface,
-                    body: const Center(child: CircularProgressIndicator()),
-                  );
+                  return _buildLoadingScreen();
                 }
-                if (userSnapshot.hasData && userSnapshot.data!.emailVerified) {
-                  return const Tabs();
-                } else {
-                  return const EmailVerificationScreen();
+                if (userSnapshot.hasData && userSnapshot.data!.exists) {
+                  final userData =
+                      userSnapshot.data!.data() as Map<String, dynamic>;
+                  final fullName = userData['name'] as String?;
+                  if (fullName == null || !fullName.contains(' ')) {
+                    return FullNameScreen(user: snapshot.data!);
+                  }
+                  if (snapshot.data!.emailVerified) {
+                    return const Tabs();
+                  } else {
+                    return const EmailVerificationScreen();
+                  }
                 }
+                return const AuthScreen();
               },
             );
           }
           return const AuthScreen();
         },
+      ),
+    );
+  }
+
+  Widget _buildLoadingScreen() {
+    return Scaffold(
+      backgroundColor: Colors.white,
+      body: Center(
+        child: CircularProgressIndicator(),
       ),
     );
   }

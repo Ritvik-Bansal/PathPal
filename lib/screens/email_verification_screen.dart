@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'dart:async';
 import 'package:pathpal/screens/auth.dart';
 
@@ -54,6 +55,9 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Email verified! You can now log in.')),
         );
+
+        await updateEmailVerifiedStatus();
+
         await FirebaseAuth.instance.signOut();
         Future.delayed(const Duration(seconds: 2), () {
           if (_isMounted) {
@@ -63,6 +67,20 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
           }
         });
       }
+    }
+  }
+
+  Future<void> updateEmailVerifiedStatus() async {
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user != null) {
+        await FirebaseFirestore.instance
+            .collection('users')
+            .doc(user.uid)
+            .update({'email_verified': true});
+      }
+    } catch (e) {
+      print('Error updating email_verified status: $e');
     }
   }
 

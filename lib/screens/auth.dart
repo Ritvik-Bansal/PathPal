@@ -3,6 +3,7 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:pathpal/screens/full_name.dart';
 import 'package:pathpal/widgets/forget_password_bottom_sheet.dart';
 import 'package:pathpal/widgets/auth_form.dart';
 import 'package:firebase_storage/firebase_storage.dart';
@@ -23,6 +24,24 @@ class _AuthScreenState extends State<AuthScreen> {
   var _isLogin = true;
   var _isAuthenticating = false;
   bool _isMounted = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _isMounted = true;
+  }
+
+  @override
+  void dispose() {
+    _isMounted = false;
+    super.dispose();
+  }
+
+  void _safeSetState(VoidCallback fn) {
+    if (_isMounted) {
+      setState(fn);
+    }
+  }
 
   void _resendVerificationEmail() async {
     ScaffoldMessenger.of(context).clearSnackBars();
@@ -77,6 +96,17 @@ class _AuthScreenState extends State<AuthScreen> {
 
         String imageUrl =
             await _uploadDefaultProfilePicture(userCredentials.user!.uid);
+
+        final result = await Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (context) => FullNameScreen(user: userCredentials.user!),
+          ),
+        );
+
+        if (result == null) {
+          await _firebase.signOut();
+          return;
+        }
 
         await userCredentials.user!.updateDisplayName(name);
         await userCredentials.user!.updatePhotoURL(imageUrl);
@@ -181,24 +211,6 @@ class _AuthScreenState extends State<AuthScreen> {
 
     final url = await ref.getDownloadURL();
     return url;
-  }
-
-  @override
-  void initState() {
-    super.initState();
-    _isMounted = true;
-  }
-
-  @override
-  void dispose() {
-    _isMounted = false;
-    super.dispose();
-  }
-
-  void _safeSetState(VoidCallback fn) {
-    if (_isMounted) {
-      setState(fn);
-    }
   }
 
   @override

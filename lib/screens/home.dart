@@ -27,12 +27,27 @@ class HomeScreen extends StatelessWidget {
                   backgroundColor: Theme.of(context).colorScheme.surface,
                 );
               }
-              if (!snapshot.hasData) {
-                return const SizedBox();
+              if (!snapshot.hasData || snapshot.data?.data() == null) {
+                return GestureDetector(
+                  onTap: () {
+                    onProfileTap();
+                  },
+                  child: Row(
+                    children: [
+                      Text('User',
+                          style: const TextStyle(
+                              fontSize: 16, fontWeight: FontWeight.bold)),
+                      const SizedBox(width: 8),
+                      CircleAvatar(
+                        child: Icon(Icons.person),
+                      ),
+                    ],
+                  ),
+                );
               }
-              final userData = snapshot.data!.data() as Map<String, dynamic>?;
-              final userName = userData?['name'] ?? 'User';
-              final profilePicUrl = userData?['profile_picture'];
+              final userData = snapshot.data!.data() as Map<String, dynamic>;
+              final userName = userData['name'] ?? 'User';
+              final profilePicUrl = userData['profile_picture'];
 
               return GestureDetector(
                 onTap: () {
@@ -97,7 +112,7 @@ class HomeScreen extends StatelessWidget {
                             ),
                           ),
                           const TextSpan(
-                            text: '.\nWelcome to PathPal.',
+                            text: '\nWelcome to PathPal',
                           ),
                         ],
                       ),

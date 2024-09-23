@@ -17,9 +17,9 @@ class LoginTile extends StatelessWidget {
         GestureDetector(
           onTap: onTap,
           child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
             decoration: BoxDecoration(
-              border: Border.all(color: Colors.grey.shade300),
+              border: Border.all(color: const Color.fromARGB(255, 0, 0, 0)),
               borderRadius: BorderRadius.circular(40),
               color: Theme.of(context).colorScheme.surface,
             ),

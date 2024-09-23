@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:pathpal/screens/auth.dart';
 import 'package:smooth_page_indicator/smooth_page_indicator.dart';
 
 class LearnMoreScreen extends StatefulWidget {
@@ -59,11 +58,7 @@ class _LearnMoreScreenState extends State<LearnMoreScreen> {
                     ElevatedButton(
                       child: Text('Go to Login'),
                       onPressed: () {
-                        Navigator.of(context).pushReplacement(MaterialPageRoute(
-                          builder: (context) {
-                            return AuthScreen();
-                          },
-                        ));
+                        Navigator.of(context).pop();
                       },
                     ),
                   ],

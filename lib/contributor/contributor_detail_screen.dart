@@ -32,6 +32,7 @@ class ContributorDetailScreen extends StatefulWidget {
 class _ContributorDetailScreenState extends State<ContributorDetailScreen> {
   bool _isFavorite = false;
   bool _hasContacted = false;
+  bool _isOwnSubmission = false;
   late FirestoreService _firestoreService;
   bool mounted = true;
 
@@ -47,6 +48,20 @@ class _ContributorDetailScreenState extends State<ContributorDetailScreen> {
     _firestoreService = widget.firestoreService;
     _checkFavoriteStatus();
     _checkContactStatus();
+    _checkIfOwnSubmission();
+  }
+
+  Future<void> _checkIfOwnSubmission() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      final contributorData =
+          await _firestoreService.getContributorFormData(widget.contributorId);
+      if (contributorData != null && contributorData['userId'] == user.uid) {
+        setState(() {
+          _isOwnSubmission = true;
+        });
+      }
+    }
   }
 
   Future<void> _checkContactStatus() async {
@@ -135,19 +150,20 @@ class _ContributorDetailScreenState extends State<ContributorDetailScreen> {
           onPressed: () => Navigator.of(context).pop(_isFavorite),
         ),
         actions: [
-          IconButton(
-            icon: Icon(
-              _isFavorite ? Icons.favorite : Icons.favorite_border,
-              color: _isFavorite ? Colors.red : null,
+          if (!_isOwnSubmission)
+            IconButton(
+              icon: Icon(
+                _isFavorite ? Icons.favorite : Icons.favorite_border,
+                color: _isFavorite ? Colors.red : null,
+              ),
+              onPressed: _toggleFavorite,
             ),
-            onPressed: _toggleFavorite,
-          ),
         ],
       ),
       body: SingleChildScrollView(
         child: Column(
           children: [
-            if (_hasContacted)
+            if (_hasContacted && !_isOwnSubmission)
               const Padding(
                 padding: EdgeInsets.all(8.0),
                 child: Text(
@@ -163,14 +179,19 @@ class _ContributorDetailScreenState extends State<ContributorDetailScreen> {
             MapWidget(contributorData: contributorData),
             const SizedBox(height: 10),
             OutlinedButton(
-              onPressed: () => _showContactConfirmationDialog(
-                  context, contributorData, userData),
+              onPressed: _isOwnSubmission
+                  ? null
+                  : () => _showContactConfirmationDialog(
+                      context, contributorData, userData),
               style: OutlinedButton.styleFrom(
-                backgroundColor: const Color.fromARGB(255, 180, 221, 255),
-                textStyle: const TextStyle(
-                    color: Colors.black,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 18),
+                backgroundColor: _isOwnSubmission
+                    ? Colors.grey[300]
+                    : const Color.fromARGB(255, 180, 221, 255),
+                textStyle: TextStyle(
+                  color: _isOwnSubmission ? Colors.grey[600] : Colors.black,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 18,
+                ),
                 padding:
                     const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
               ),
