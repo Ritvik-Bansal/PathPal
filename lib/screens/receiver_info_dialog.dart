@@ -57,7 +57,7 @@ class ReceiverInfoDialog extends StatelessWidget {
 
         return AlertDialog(
           title: Text(
-              isContributor ? 'Volunteer Information' : 'Receiver Information'),
+              isContributor ? 'Volunteer Information' : 'Seeker Information'),
           content: SingleChildScrollView(
             child: ListBody(
               children: <Widget>[

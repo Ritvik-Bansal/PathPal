@@ -99,7 +99,7 @@ class _AdditionalInfoPageState extends State<AdditionalInfoPage> {
                 ),
               const SizedBox(height: 8),
               const Text(
-                'This description will be shown to potential volunteer contributors.',
+                'This description will be shown to potential volunteers.',
                 style: TextStyle(fontSize: 12, color: Colors.grey),
               ),
               const SizedBox(height: 16),

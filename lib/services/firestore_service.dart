@@ -77,7 +77,7 @@ class FirestoreService {
         await _firestore.collection('receivers').add(formData);
       }
     } catch (e) {
-      print('Error submitting receiver form: $e');
+      print('Error submitting Seeker form: $e');
       rethrow;
     }
   }
@@ -134,19 +134,29 @@ class FirestoreService {
         'partySize': formState.partySize,
         'departureAirport': formState.departureAirport?.toJson(),
         'arrivalAirport': formState.arrivalAirport?.toJson(),
-        'hasLayover': formState.hasLayover,
+        'numberOfLayovers': formState.numberOfLayovers,
         'flightDateTimeFirstLeg':
             Timestamp.fromDate(formState.flightDateTimeFirstLeg!),
         'flightNumberFirstLeg': formState.flightNumber.toUpperCase(),
         'updatedAt': FieldValue.serverTimestamp(),
       };
 
-      if (formState.hasLayover) {
+      if (formState.numberOfLayovers > 0) {
         contributorData['flightNumberSecondLeg'] =
             formState.flightNumberSecondLeg.toUpperCase();
-        contributorData['layoverAirport'] = formState.layoverAirport?.toJson();
+        contributorData['firstLayoverAirport'] =
+            formState.firstLayoverAirport?.toJson();
         contributorData['flightDateTimeSecondLeg'] =
             Timestamp.fromDate(formState.flightDateTimeSecondLeg!);
+      }
+
+      if (formState.numberOfLayovers > 1) {
+        contributorData['flightNumberThirdLeg'] =
+            formState.flightNumberThirdLeg.toUpperCase();
+        contributorData['secondLayoverAirport'] =
+            formState.secondLayoverAirport?.toJson();
+        contributorData['flightDateTimeThirdLeg'] =
+            Timestamp.fromDate(formState.flightDateTimeThirdLeg!);
       }
 
       DocumentReference contributorRef =
@@ -160,26 +170,138 @@ class FirestoreService {
     }
   }
 
+  Future<Map<String, dynamic>> canContactTentativeReceiver(
+      String receiverId) async {
+    try {
+      final user = _auth.currentUser;
+      if (user == null) throw Exception('No authenticated user found');
+
+      final userDoc = await _firestore.collection('users').doc(user.uid).get();
+      if (!userDoc.exists) return {'canContact': true, 'remainingTime': null};
+
+      final userData = userDoc.data();
+      if (userData == null) return {'canContact': true, 'remainingTime': null};
+
+      final contactedTentativeReceivers =
+          userData['contactedTentativeReceivers'];
+
+      if (contactedTentativeReceivers == null) {
+        return {'canContact': true, 'remainingTime': null};
+      }
+
+      Timestamp? lastContactTime;
+
+      if (contactedTentativeReceivers is Map) {
+        lastContactTime = contactedTentativeReceivers[receiverId] as Timestamp?;
+      } else if (contactedTentativeReceivers is List) {
+        final lastContactEntry = contactedTentativeReceivers
+            .cast<Map<String, dynamic>>()
+            .lastWhere((entry) => entry['receiverId'] == receiverId,
+                orElse: () => {});
+        lastContactTime = lastContactEntry['timestamp'] as Timestamp?;
+      } else {
+        print(
+            'Unexpected type for contactedTentativeReceivers: ${contactedTentativeReceivers.runtimeType}');
+        return {'canContact': true, 'remainingTime': null};
+      }
+
+      if (lastContactTime != null) {
+        final cooldownPeriod = Duration(hours: 24);
+        final timeSinceLastContact =
+            DateTime.now().difference(lastContactTime.toDate());
+        if (timeSinceLastContact < cooldownPeriod) {
+          final remainingTime = cooldownPeriod - timeSinceLastContact;
+          return {
+            'canContact': false,
+            'remainingTime': remainingTime,
+          };
+        }
+      }
+
+      return {'canContact': true, 'remainingTime': null};
+    } catch (e, stackTrace) {
+      print('Error in canContactTentativeReceiver: $e');
+      print('Stack trace: $stackTrace');
+      return {'canContact': false, 'remainingTime': null};
+    }
+  }
+
+  Future<void> addContactedTentativeReceiver(String receiverId) async {
+    try {
+      final user = _auth.currentUser;
+      if (user == null) throw Exception('No authenticated user found');
+
+      final userDoc = await _firestore.collection('users').doc(user.uid).get();
+      final userData = userDoc.data() ?? {};
+
+      if (userData['contactedTentativeReceivers'] is Map) {
+        await _firestore.collection('users').doc(user.uid).update({
+          'contactedTentativeReceivers.$receiverId':
+              FieldValue.serverTimestamp(),
+        });
+      } else {
+        await _firestore.collection('users').doc(user.uid).update({
+          'contactedTentativeReceivers': FieldValue.arrayUnion([
+            {
+              'receiverId': receiverId,
+              'timestamp': FieldValue.serverTimestamp(),
+            }
+          ])
+        });
+      }
+    } catch (e, stackTrace) {
+      print('Error adding contacted Seeker: $e');
+      print('Stack trace: $stackTrace');
+      rethrow;
+    }
+  }
+
+  Future<Map<String, dynamic>> canContactContributor(
+      String contributorId) async {
+    final user = _auth.currentUser;
+    if (user == null) throw Exception('No authenticated user found');
+
+    final userDoc = await _firestore.collection('users').doc(user.uid).get();
+    if (!userDoc.exists) return {'canContact': true, 'remainingTime': null};
+
+    final contactedContributors =
+        userDoc.data()?['contactedContributors'] as Map<String, dynamic>? ?? {};
+    final lastContactTime = contactedContributors[contributorId] as Timestamp?;
+
+    if (lastContactTime != null) {
+      final cooldownPeriod = Duration(hours: 24);
+      final timeSinceLastContact =
+          DateTime.now().difference(lastContactTime.toDate());
+      if (timeSinceLastContact < cooldownPeriod) {
+        final remainingTime = cooldownPeriod - timeSinceLastContact;
+        return {
+          'canContact': false,
+          'remainingTime': remainingTime,
+        };
+      }
+    }
+    return {'canContact': true, 'remainingTime': null};
+  }
+
   Future<void> addContactedContributor(String contributorId) async {
     final user = _auth.currentUser;
     if (user == null) throw Exception('No authenticated user found');
 
-    await _firestore.collection('users').doc(user.uid).update({
-      'contactedContributors': FieldValue.arrayUnion([contributorId])
-    });
+    await _firestore.collection('users').doc(user.uid).update(
+        {'contactedContributors.$contributorId': FieldValue.serverTimestamp()});
 
     final contributorDoc =
         await _firestore.collection('contributors').doc(contributorId).get();
 
     if (!contributorDoc.exists) {
-      throw Exception('Contributor document not found');
+      throw Exception('Volunteer document not found');
     }
 
     final contributorData = contributorDoc.data() as Map<String, dynamic>;
     final contributorUserId = contributorData['userId'] as String?;
 
     if (contributorUserId == null) {
-      throw Exception('Contributor userId not found');
+      throw Exception('Volunteer userId not found');
     }
 
     QuerySnapshot receiverQuery = await _firestore
@@ -207,8 +329,8 @@ class FirestoreService {
 
     final doc = await _firestore.collection('users').doc(user.uid).get();
     final contactedContributors =
-        doc.data()?['contactedContributors'] as List<dynamic>? ?? [];
-    return contactedContributors.contains(contributorId);
+        doc.data()?['contactedContributors'] as Map<String, dynamic>? ?? {};
+    return contactedContributors.containsKey(contributorId);
   }
 
   Future<void> removeContributorFromAllFavorites(String contributorId) async {
@@ -244,7 +366,7 @@ class FirestoreService {
 
       await batch.commit();
     } catch (e) {
-      print('Error removing contributor from favorites and contacts: $e');
+      print('Error removing volunteer from favorites and contacts: $e');
       rethrow;
     }
   }
@@ -308,9 +430,17 @@ class FirestoreService {
       final updateData = formState.toMap();
       updateData['updatedAt'] = FieldValue.serverTimestamp();
 
-      if (!formState.hasLayover) {
-        updateData.remove('layoverAirport');
+      if (formState.numberOfLayovers == 0) {
+        updateData.remove('firstLayoverAirport');
+        updateData.remove('secondLayoverAirport');
         updateData.remove('flightNumberSecondLeg');
+        updateData.remove('flightNumberThirdLeg');
+        updateData.remove('flightDateTimeSecondLeg');
+        updateData.remove('flightDateTimeThirdLeg');
+      } else if (formState.numberOfLayovers == 1) {
+        updateData.remove('secondLayoverAirport');
+        updateData.remove('flightNumberThirdLeg');
+        updateData.remove('flightDateTimeThirdLeg');
       }
 
       await _firestore
@@ -320,7 +450,7 @@ class FirestoreService {
 
       await _emailService.checkTentativeReceivers(formState, contributorId);
     } catch (e) {
-      print('Error updating contributor form: $e');
+      print('Error updating volunteer form: $e');
       rethrow;
     }
   }
@@ -351,22 +481,8 @@ class FirestoreService {
           userDoc.data()?['contactedTentativeReceivers'] ?? []);
       return contactedTentativeReceivers.contains(receiverId);
     } catch (e) {
-      print('Error checking if receiver has been contacted: $e');
+      print('Error checking if Seeker has been contacted: $e');
       return false;
-    }
-  }
-
-  Future<void> addContactedTentativeReceiver(String receiverId) async {
-    try {
-      final user = _auth.currentUser;
-      if (user == null) throw Exception('No authenticated user found');
-
-      await _firestore.collection('users').doc(user.uid).update({
-        'contactedTentativeReceivers': FieldValue.arrayUnion([receiverId])
-      });
-    } catch (e) {
-      print('Error adding contacted receiver: $e');
-      rethrow;
     }
   }
 
@@ -425,7 +541,7 @@ class FirestoreService {
             .add(tentativeReceiverData);
       }
     } catch (e) {
-      print('Error adding/updating tentative receiver: $e');
+      print('Error adding/updating Seeker: $e');
       rethrow;
     }
   }
@@ -434,7 +550,7 @@ class FirestoreService {
     try {
       await _firestore.collection('tentativeReceivers').doc(requestId).delete();
     } catch (e) {
-      print('Error deleting tentative request: $e');
+      print('Error deleting seeker request: $e');
       rethrow;
     }
   }
@@ -465,7 +581,7 @@ class FirestoreService {
           .doc(docId)
           .update(tentativeReceiverData);
     } catch (e) {
-      print('Error updating tentative receiver: $e');
+      print('Error updating Seeker request: $e');
       rethrow;
     }
   }
@@ -487,7 +603,7 @@ class FirestoreService {
         return querySnapshot.docs.first;
       }
     } catch (e) {
-      print('Error fetching existing tentative receiver request: $e');
+      print('Error fetching existing Seeker request: $e');
     }
     return null;
   }
@@ -541,7 +657,7 @@ class FirestoreService {
       }
       await batch.commit();
     } catch (e) {
-      print('Error deleting notifications for contributor: $e');
+      print('Error deleting notifications for volunteer: $e');
       rethrow;
     }
   }

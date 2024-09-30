@@ -36,22 +36,22 @@ class PrivacyPolicyScreen extends StatelessWidget {
             _buildSection(
               title: '1. Information We Collect',
               subsections: [
-                '1.1 Registration Information\nUsers: When you register for PathPal, we collect your first and last name, email address, and password.\n\nVolunteers: When you continue as a Volunteer, we collect travel itinerary details, including flight numbers, dates, people in the party, and travel routes, along with the already given details from the account creation.\n\nReceivers: When you register as a Receiver, we collect your reason for seeking assistance, travel itinerary details, and the number of people in your party, along with the already given details from the account creation.',
-                '1.2 Usage Information\nWe collect information about how you interact with the app and the details you provide during the Volunteer or Receiver flow.',
-                '1.3 Communication Information\nWhen Receivers contact Volunteers through the app, we collect and process the email sent to the Volunteer via PathPal, which includes the Receiver\'s contact information.',
+                '1.1 Registration Information\nUsers: When you register for PathPal, we collect your first and last name, email address, and password.\n\nVolunteers: When you continue as a Volunteer, we collect travel itinerary details, including flight numbers, dates, people in the party, and travel routes, along with the already given details from the account creation.\n\nSeekers: When you register as a Seeker, we collect your reason for seeking assistance, travel itinerary details, and the number of people in your party, along with the already given details from the account creation.',
+                '1.2 Usage Information\nWe collect information about how you interact with the app and the details you provide during the Volunteer or Seeker flow.',
+                '1.3 Communication Information\nWhen Seekers contact Volunteers through the app, we collect and process the email sent to the Volunteer via PathPal, which includes the Seeker\'s contact information.',
               ],
             ),
             _buildSection(
               title: '2. How We Use Your Information',
               subsections: [
-                '2.1 Providing Services\nWe use your personal information to facilitate connections between Volunteers and Receivers, display suitable matches, and manage user accounts.\n\nWe ensure that the Volunteer\'s name and personal details remain private and are never disclosed to Receivers.',
+                '2.1 Providing Services\nWe use your personal information to facilitate connections between Volunteers and Seekers, display suitable matches, and manage user accounts.\n\nWe ensure that the Volunteer\'s name and personal details remain private and are never disclosed to Seekers.',
                 '2.2 Email Verification\nWe use your email address to send verification links during the registration process. Your account must be verified before you can access the app.',
               ],
             ),
             _buildSection(
               title: '3. Information Sharing and Disclosure',
               subsections: [
-                '3.1 With Other Users\nVolunteers: Your travel itinerary details (excluding your name, email, and password) are shared with potential Receivers to facilitate matching. Your personal information always remains private.\n\nReceivers: Your contact information is only shared with a Volunteer when you choose to contact them through the app.',
+                '3.1 With Other Users\nVolunteers: Your travel itinerary details (excluding your name, email, and password) are shared with potential Seekers to facilitate matching. Your personal information always remains private.\n\nSeekers: Your contact information is only shared with a Volunteer when you choose to contact them through the app.',
                 '3.2 With Third Parties\nWe do not sell, trade, or otherwise transfer your personal information to outside parties, except as required by law or to protect the rights, property, or safety of PathPal, our users, or others.',
               ],
             ),

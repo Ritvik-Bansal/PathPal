@@ -1,12 +1,14 @@
 import 'dart:convert';
-import 'package:http/http.dart' as http;
+
 import 'package:flutter/material.dart';
-import 'package:pathpal/contributor/filtered_contributors_screen.dart';
+import 'package:intl/intl.dart';
+import 'package:pathpal/data/airport_database.dart';
+import 'package:pathpal/models/airport_model.dart';
 import 'package:pathpal/receiver/receiver_form_state.dart';
-import 'package:pathpal/receiver/date_selection_page.dart';
-import 'package:pathpal/receiver/airport_selection_page.dart';
 import 'package:pathpal/services/firestore_service.dart';
+import 'package:pathpal/contributor/filtered_contributors_screen.dart';
 import 'package:country_picker/country_picker.dart';
+import 'package:http/http.dart' as http;
 
 class RecieverFormScreen extends StatefulWidget {
   final Map<String, dynamic>? existingData;
@@ -14,26 +16,22 @@ class RecieverFormScreen extends StatefulWidget {
   final bool isEditing;
 
   const RecieverFormScreen({
-    super.key,
+    Key? key,
     this.existingData,
     this.docId,
     this.isEditing = false,
-  });
+  }) : super(key: key);
 
   @override
   _RecieverFormScreenState createState() => _RecieverFormScreenState();
 }
 
 class _RecieverFormScreenState extends State<RecieverFormScreen> {
-  final PageController _pageController = PageController();
   final ReceiverFormState _formState = ReceiverFormState();
   final FirestoreService _firestoreService = FirestoreService();
-
-  int _currentPage = 0;
-  final int _numPages = 2;
-
-  String _phone = "";
+  final TextEditingController _phoneController = TextEditingController();
   Country? _country;
+  final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
 
   @override
   void initState() {
@@ -45,14 +43,19 @@ class _RecieverFormScreenState extends State<RecieverFormScreen> {
       _loadExistingForm();
     }
     _formState.updateReason('I am elderly');
-  }
-
-  void _loadExistingData(Map<String, dynamic> data) {
-    setState(() {
-      _formState.updateFromMap(data);
-      int num = _formState.phoneNumber.trim().indexOf(" ");
-      _phone = _formState.phoneNumber.trim().substring(num + 1);
-    });
+    _country = Country(
+      phoneCode: '1',
+      countryCode: 'US',
+      e164Sc: 0,
+      geographic: true,
+      level: 1,
+      name: 'United States',
+      example: '2012345678',
+      displayName: 'United States (US) [+1]',
+      displayNameNoCountryCode: 'United States (US)',
+      e164Key: '1-US-0',
+      fullExampleWithPlusSign: '+12012345678',
+    );
   }
 
   void _initializeCountry() async {
@@ -76,13 +79,31 @@ class _RecieverFormScreenState extends State<RecieverFormScreen> {
     }
   }
 
+  void _loadExistingData(Map<String, dynamic> data) {
+    setState(() {
+      _formState.updateFromMap(data);
+      _phoneController.text = _formState.phoneNumber.split(' ').last;
+
+      if (_formState.startDate != null && _formState.endDate != null) {
+        final DateFormat displayFormatter = DateFormat('MMM d');
+        _formState.displayDateRange =
+            '${displayFormatter.format(_formState.startDate!)} - ${displayFormatter.format(_formState.endDate!)}';
+      }
+    });
+  }
+
   void _loadExistingForm() async {
     final existingForm = await _firestoreService.getExistingReceiverForm();
     if (existingForm != null) {
       setState(() {
         _formState.updateFromExistingForm(existingForm);
-        int num = _formState.phoneNumber.trim().indexOf(" ");
-        _phone = _formState.phoneNumber.trim().substring(num + 1);
+        _phoneController.text = _formState.phoneNumber.split(' ').last;
+
+        if (_formState.startDate != null && _formState.endDate != null) {
+          final DateFormat displayFormatter = DateFormat('MMM d');
+          _formState.displayDateRange =
+              '${displayFormatter.format(_formState.startDate!)} - ${displayFormatter.format(_formState.endDate!)}';
+        }
       });
     }
   }
@@ -95,345 +116,344 @@ class _RecieverFormScreenState extends State<RecieverFormScreen> {
         title: const Text('Seeking help'),
         centerTitle: true,
       ),
-      body: SafeArea(
-        child: Column(
-          children: [
-            Expanded(
-              child: PageView(
-                controller: _pageController,
-                physics: const NeverScrollableScrollPhysics(),
-                onPageChanged: (index) {
-                  setState(() {
-                    _currentPage = index;
-                  });
-                },
-                children: [
-                  SingleChildScrollView(
-                    child: Padding(
-                      padding: const EdgeInsets.all(16.0),
-                      child: Column(
-                        children: [
-                          AirportSelectionPage(
-                            formState: _formState,
-                            onStartAirportSelected: (airport) {
-                              setState(() {
-                                _formState.updateStartAirport(airport);
-                              });
-                            },
-                            onEndAirportSelected: (airport) {
-                              setState(() {
-                                _formState.updateEndAirport(airport);
-                              });
-                            },
-                          ),
-                          const SizedBox(height: 30),
-                          DateSelectionPage(
-                            formState: _formState,
-                            onDateRangeSelected: (dateRange) {
-                              setState(() {
-                                _formState.updateDateRange(dateRange);
-                              });
-                            },
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                  SingleChildScrollView(
-                    child: Padding(
-                      padding: const EdgeInsets.all(16.0),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text('Reason for assistance',
-                              style: TextStyle(
-                                  fontSize: 18, fontWeight: FontWeight.w500)),
-                          DropdownButtonFormField<String>(
-                            dropdownColor:
-                                Theme.of(context).colorScheme.surface,
-                            borderRadius: BorderRadius.circular(30),
-                            value: _formState.reason.isEmpty
-                                ? 'I am elderly'
-                                : _formState.reason,
-                            decoration: InputDecoration(
-                              border: const OutlineInputBorder(),
-                              errorText: (_formState.submitted ||
-                                          _formState.reasonTouched) &&
-                                      !_formState.isReasonValid()
-                                  ? 'Reason is required'
-                                  : null,
-                            ),
-                            items: const [
-                              DropdownMenuItem(
-                                  value: 'I am elderly',
-                                  child: Text('I am elderly')),
-                              DropdownMenuItem(
-                                  value:
-                                      'I am a single parent flying with kids',
-                                  child: Text(
-                                      'I am a single parent flying with kids')),
-                              DropdownMenuItem(
-                                  value: 'I need company',
-                                  child: Text('I need company')),
-                              DropdownMenuItem(
-                                  value: 'Other', child: Text('Other')),
-                            ],
-                            onChanged: (value) {
-                              setState(() {
-                                _formState.updateReason(value ?? '');
-                              });
-                            },
-                          ),
-                          if (_formState.reason == 'Other')
-                            Padding(
-                              padding: const EdgeInsets.only(top: 8.0),
-                              child: TextFormField(
-                                initialValue: _formState.otherReason,
-                                maxLines: 3,
-                                decoration: const InputDecoration(
-                                  hintText:
-                                      'Please provide a short description',
-                                  border: OutlineInputBorder(),
-                                ),
-                                onChanged: (value) {
-                                  _formState.updateOtherReason(value);
-                                },
-                              ),
-                            ),
-                          const SizedBox(height: 50),
-                          const Text('Number of people in your party',
-                              style: TextStyle(
-                                  fontSize: 18, fontWeight: FontWeight.w500)),
-                          TextFormField(
-                            initialValue: _formState.partySize.toString(),
-                            keyboardType: TextInputType.number,
-                            decoration: const InputDecoration(
-                              hintText: 'Enter the number of people',
-                              border: OutlineInputBorder(),
-                            ),
-                            onChanged: (value) {
-                              _formState
-                                  .updatePartySize(int.tryParse(value) ?? 1);
-                            },
-                          ),
-                          const SizedBox(height: 50),
-                          const Text(
-                            'Enter a phone number',
-                            style: TextStyle(
-                                fontSize: 18, fontWeight: FontWeight.w500),
-                          ),
-                          Row(
-                            children: [
-                              Expanded(
-                                child: TextFormField(
-                                  initialValue: _phone,
-                                  decoration: InputDecoration(
-                                    labelText: 'Phone Number',
-                                    prefixIcon: _country != null
-                                        ? GestureDetector(
-                                            onTap: () {
-                                              showCountryPicker(
-                                                context: context,
-                                                onSelect: (Country country) {
-                                                  setState(() {
-                                                    _country = country;
-                                                  });
-                                                },
-                                                favorite: ['US', 'IN'],
-                                              );
-                                            },
-                                            child: Container(
-                                              height: 56,
-                                              width: 70,
-                                              alignment: Alignment.center,
-                                              child: Text(
-                                                '${_country?.flagEmoji ?? ''} +${_country?.phoneCode ?? ''}',
-                                                style: TextStyle(
-                                                  fontSize: 16,
-                                                  color: Theme.of(context)
-                                                      .colorScheme
-                                                      .onSurface,
-                                                  fontWeight: FontWeight.bold,
-                                                ),
-                                              ),
-                                            ),
-                                          )
-                                        : null,
-                                  ),
-                                  keyboardType: TextInputType.phone,
-                                  validator: (value) {
-                                    if (value!.isEmpty) {
-                                      return 'Please enter a phone number';
-                                    } else if (!RegExp(
-                                            r'^\s*(?:\+?(\d{1,3}))?[-. (]*(\d{3})[-. )]*(\d{3})[-. ]*(\d{4})(?: *x(\d+))?\s*$')
-                                        .hasMatch(value)) {
-                                      return 'Please enter a valid phone number';
-                                    }
-                                    return null;
-                                  },
-                                  onChanged: (value) {
-                                    setState(() {
-                                      _phone = "+${_country!.phoneCode} $value";
-                                      _formState.updatePhoneNumber(_phone);
-                                    });
-                                  },
-                                ),
-                              ),
-                            ],
-                          ),
-                          SizedBox(height: 50),
-                        ],
-                      ),
-                    ),
-                  ),
-                ],
-              ),
+      body: Form(
+        key: _formKey,
+        child: SingleChildScrollView(
+          child: Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _buildAirportSelection(),
+                const SizedBox(height: 24),
+                Row(
+                  children: [
+                    Expanded(child: _buildDateSelection()),
+                    const SizedBox(width: 16),
+                    _buildPartySizeSelection(),
+                  ],
+                ),
+                const SizedBox(height: 24),
+                _buildReasonSelection(),
+                const SizedBox(height: 24),
+                _buildPhoneNumberInput(),
+                const SizedBox(height: 32),
+                _buildSubmitButton(),
+              ],
             ),
-            _buildPageIndicator(),
-            _buildNavigationButtons(),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildAirportSelection() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildAirportSearch(
+          hint: 'From',
+          icon: Icons.flight_takeoff,
+          onSelect: _formState.updateStartAirport,
+          selectedAirport: _formState.startAirport,
+        ),
+        const SizedBox(height: 16),
+        _buildAirportSearch(
+          hint: 'To',
+          icon: Icons.flight_land,
+          onSelect: _formState.updateEndAirport,
+          selectedAirport: _formState.endAirport,
+        ),
+      ],
+    );
+  }
+
+  Widget _buildAirportSearch({
+    required String hint,
+    required IconData icon,
+    required Function(Airport) onSelect,
+    Airport? selectedAirport,
+  }) {
+    return Container(
+      decoration: BoxDecoration(
+        border: Border.all(
+            color: const Color.fromARGB(255, 108, 108, 108), width: 1.0),
+        borderRadius: BorderRadius.circular(10.0),
+      ),
+      child: SearchAnchor(
+        viewBackgroundColor: Theme.of(context).colorScheme.surface,
+        builder: (BuildContext context, SearchController controller) {
+          return SearchBar(
+            backgroundColor:
+                WidgetStatePropertyAll(Theme.of(context).colorScheme.surface),
+            elevation: const WidgetStatePropertyAll(0.0),
+            controller: controller,
+            padding: const WidgetStatePropertyAll<EdgeInsets>(
+                EdgeInsets.symmetric(horizontal: 16.0)),
+            onTap: () {
+              controller.openView();
+            },
+            onChanged: (_) {
+              controller.openView();
+            },
+            leading: Icon(icon),
+            hintText: selectedAirport != null
+                ? '${selectedAirport.name} (${selectedAirport.iata})'
+                : hint,
+            trailing: selectedAirport != null
+                ? [
+                    Padding(
+                      padding: const EdgeInsets.only(right: 8.0),
+                      child: Text(selectedAirport.iata,
+                          style: const TextStyle(fontWeight: FontWeight.bold)),
+                    ),
+                  ]
+                : null,
+          );
+        },
+        suggestionsBuilder:
+            (BuildContext context, SearchController controller) async {
+          final airports =
+              await AirportDatabase.instance.searchAirports(controller.text);
+          return airports.map((airport) => ListTile(
+                title: Text(airport.name),
+                subtitle: Text('${airport.city}, ${airport.country}'),
+                trailing: Text(airport.iata),
+                onTap: () {
+                  onSelect(airport);
+                  controller.closeView('${airport.name} (${airport.iata})');
+                },
+              ));
+        },
+      ),
+    );
+  }
+
+  void _pickDateRange(BuildContext context) async {
+    final DateTimeRange? picked = await showDateRangePicker(
+      context: context,
+      firstDate: DateTime.now(),
+      lastDate: DateTime(2100),
+      builder: (BuildContext context, Widget? child) {
+        return Theme(
+          data: ThemeData.light().copyWith(
+            primaryColor: Theme.of(context).colorScheme.primaryContainer,
+            colorScheme: Theme.of(context).colorScheme,
+            scaffoldBackgroundColor: Theme.of(context).colorScheme.surface,
+          ),
+          child: child!,
+        );
+      },
+    );
+
+    if (picked != null) {
+      final DateFormat formatter = DateFormat('yyyy-MM-dd');
+      final String formattedStartDate = formatter.format(picked.start);
+      final String formattedEndDate = formatter.format(picked.end);
+      final String formattedRange = '$formattedStartDate - $formattedEndDate';
+
+      setState(() {
+        _formState.updateDateRange(formattedRange);
+      });
+
+      // Update the display format separately
+      final DateFormat displayFormatter = DateFormat('MMM d');
+      final String displayRange =
+          '${displayFormatter.format(picked.start)} - ${displayFormatter.format(picked.end)}';
+      setState(() {
+        _formState.displayDateRange = displayRange;
+      });
+    }
+  }
+
+  Widget _buildDateSelection() {
+    return InkWell(
+      onTap: () => _pickDateRange(context),
+      child: InputDecorator(
+        decoration: InputDecoration(
+          labelText: 'Travel Dates',
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(10.0),
+          ),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(_formState.displayDateRange.isEmpty
+                ? 'Select dates'
+                : _formState.displayDateRange),
+            const Icon(Icons.calendar_today),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildPageIndicator() {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: List.generate(
-        _numPages,
-        (index) => _buildIndicator(index == _currentPage),
+  Widget _buildReasonSelection() {
+    return DropdownButtonFormField<String>(
+      value: _formState.reason,
+      decoration: InputDecoration(
+        labelText: 'Reason for assistance',
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(10.0),
+        ),
       ),
+      items: const [
+        DropdownMenuItem(value: 'I am elderly', child: Text('I am elderly')),
+        DropdownMenuItem(
+            value: 'I am a single parent flying with kids',
+            child: Text('Single parent with kids')),
+        DropdownMenuItem(value: 'I need company', child: Text('Need company')),
+        DropdownMenuItem(value: 'Other', child: Text('Other')),
+      ],
+      onChanged: (value) {
+        setState(() {
+          _formState.updateReason(value ?? '');
+        });
+      },
     );
   }
 
-  Widget _buildIndicator(bool isActive) {
-    return AnimatedContainer(
-      duration: const Duration(milliseconds: 150),
-      margin: const EdgeInsets.symmetric(horizontal: 8.0),
-      height: 8.0,
-      width: isActive ? 24.0 : 16.0,
+  Widget _buildPartySizeSelection() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
       decoration: BoxDecoration(
-        color:
-            isActive ? const Color.fromARGB(255, 147, 201, 246) : Colors.grey,
-        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.grey),
+        borderRadius: BorderRadius.circular(8),
       ),
-    );
-  }
-
-  Widget _buildNavigationButtons() {
-    return Padding(
-      padding: const EdgeInsets.all(16.0),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        mainAxisSize: MainAxisSize.min,
         children: [
-          if (_currentPage > 0)
-            ElevatedButton(
-              onPressed: () {
-                _pageController.previousPage(
-                  duration: const Duration(milliseconds: 400),
-                  curve: Curves.easeInOut,
-                );
-              },
-              child: const Text('Previous'),
-            )
-          else
-            const SizedBox(),
-          if (_currentPage < _numPages - 1)
-            ElevatedButton(
-              onPressed: _validateAndProceed,
-              child: const Text('Next'),
-            )
-          else
-            ElevatedButton(
-              onPressed: _submitForm,
-              child: const Text('Submit'),
-            ),
+          const Icon(Icons.person, size: 20),
+          const SizedBox(width: 4),
+          DropdownButton<int>(
+            value: _formState.partySize,
+            dropdownColor: Theme.of(context).colorScheme.surface,
+            items: List.generate(10, (index) => index + 1)
+                .map((i) => DropdownMenuItem(value: i, child: Text('$i')))
+                .toList(),
+            onChanged: (value) {
+              setState(() {
+                _formState.updatePartySize(value ?? 1);
+              });
+            },
+            underline: Container(),
+            icon: const Icon(Icons.arrow_drop_down),
+            isDense: true,
+          ),
         ],
       ),
     );
   }
 
-  void _validateAndProceed() {
-    setState(() {});
-
-    if (_validateCurrentPage()) {
-      _pageController.nextPage(
-        duration: const Duration(milliseconds: 400),
-        curve: Curves.easeInOut,
-      );
-    }
+  Widget _buildPhoneNumberInput() {
+    return TextFormField(
+      controller: _phoneController,
+      validator: (value) {
+        if (value == null || value.isEmpty) {
+          return 'Please enter a phone number';
+        }
+        String digitsOnly = value.replaceAll(RegExp(r'\D'), '');
+        if (digitsOnly.length < 10 || digitsOnly.length > 15) {
+          return 'Please enter a valid phone number';
+        }
+        return null;
+      },
+      decoration: InputDecoration(
+        labelText: 'Phone Number',
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(10.0),
+        ),
+        prefixIcon: GestureDetector(
+          onTap: () {
+            showCountryPicker(
+              context: context,
+              onSelect: (Country country) {
+                setState(() {
+                  _country = country;
+                });
+              },
+            );
+          },
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8.0),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  '${_country?.flagEmoji ?? ''} +${_country?.phoneCode ?? ''}',
+                  style: const TextStyle(fontSize: 16),
+                ),
+                const Icon(Icons.arrow_drop_down),
+              ],
+            ),
+          ),
+        ),
+      ),
+      keyboardType: TextInputType.phone,
+      onChanged: (value) {
+        _formState.updatePhoneNumber('+${_country!.phoneCode} $value');
+      },
+    );
   }
 
-  bool _validateCurrentPage() {
-    if (_currentPage == 0) {
-      return _formState.selectedDateRange.isNotEmpty &&
-          _formState.startAirport != null &&
-          _formState.endAirport != null;
-    }
-    return true;
+  Widget _buildSubmitButton() {
+    return SizedBox(
+      width: double.infinity,
+      child: OutlinedButton(
+        style: OutlinedButton.styleFrom(
+            backgroundColor: const Color.fromARGB(255, 202, 231, 255)),
+        onPressed: _submitForm,
+        child: Text(
+          widget.isEditing ? 'Save' : 'Search',
+          style: TextStyle(color: Colors.black),
+        ),
+      ),
+    );
   }
 
   void _submitForm() async {
-    if (!_validateCurrentPage()) {
-      setState(() {});
-      return;
-    }
-
-    if (_formState.phoneNumber.isEmpty) {
-      ScaffoldMessenger.of(context).clearSnackBars();
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Phone number is required')),
-      );
-      return;
-    }
-
-    if (!_validatePhoneNumber(_formState.phoneNumber)) {
-      ScaffoldMessenger.of(context).clearSnackBars();
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please enter a valid phone number')),
-      );
-      return;
-    }
-
-    try {
-      if (widget.isEditing) {
-        await _firestoreService.updateTentativeReceiver(
-            widget.docId!, _formState);
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-              content: Text('Tentative request updated successfully')),
-        );
-        Navigator.of(context).pop();
-      } else {
-        await _firestoreService.submitReceiverForm(_formState);
-        ScaffoldMessenger.of(context).clearSnackBars();
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Form submitted successfully')),
-        );
-        Navigator.of(context).pushReplacement(
-          MaterialPageRoute(
-            builder: (context) =>
-                FilteredContributorsScreen(receiverFormState: _formState),
-          ),
-        );
-        // await _firestoreService.addOrUpdateTentativeReceiver(_formState);
-        // ScaffoldMessenger.of(context).showSnackBar(
-        //   const SnackBar(
-        //       content: Text('Tentative request submitted successfully')),
-        // );
+    if (_formKey.currentState!.validate()) {
+      if (!_validateForm()) {
+        return;
       }
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error submitting form: $e')),
-      );
+
+      try {
+        if (widget.isEditing) {
+          await _firestoreService.updateTentativeReceiver(
+              widget.docId!, _formState);
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+                content: Text('Seeker request updated successfully')),
+          );
+          Navigator.of(context).pop();
+        } else {
+          await _firestoreService.submitReceiverForm(_formState);
+          Navigator.of(context).pushReplacement(
+            MaterialPageRoute(
+              builder: (context) =>
+                  FilteredContributorsScreen(receiverFormState: _formState),
+            ),
+          );
+        }
+      } catch (e) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error submitting form: $e')),
+        );
+      }
     }
   }
 
-  bool _validatePhoneNumber(String phoneNumber) {
-    final phoneNumberRegex = RegExp(
-      r'^\s*(?:\+?(\d{1,3}))?[-. (]*(\d{3})[-. )]*(\d{3})[-. ]*(\d{4})(?: *x(\d+))?\s*$',
-    );
-    return phoneNumberRegex.hasMatch(phoneNumber);
+  bool _validateForm() {
+    if (_formState.startAirport == null ||
+        _formState.endAirport == null ||
+        _formState.selectedDateRange.isEmpty ||
+        _formState.phoneNumber.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please fill in all required fields')),
+      );
+      return false;
+    }
+    return true;
   }
 }

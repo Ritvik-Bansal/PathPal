@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:pathpal/models/airport_model.dart';
 
@@ -5,20 +7,24 @@ class ContributorFormState {
   ContributorFormState();
   String flightNumberFirstLeg = '';
   String flightNumberSecondLeg = '';
+  String flightNumberThirdLeg = '';
   String _flightNumber = '';
   int partySize = 1;
   Airport? departureAirport;
   Airport? arrivalAirport;
-  Airport? layoverAirport;
-  bool hasLayover = false;
+  Airport? firstLayoverAirport;
+  Airport? secondLayoverAirport;
+  int numberOfLayovers = 0;
   String email = '';
   DateTime? flightDateTimeFirstLeg;
   DateTime? flightDateTimeSecondLeg;
+  DateTime? flightDateTimeThirdLeg;
   String userid = '';
 
-  String get flightNumber => hasLayover ? flightNumberFirstLeg : _flightNumber;
+  String get flightNumber =>
+      numberOfLayovers > 0 ? flightNumberFirstLeg : _flightNumber;
   set flightNumber(String value) {
-    if (hasLayover) {
+    if (numberOfLayovers > 0) {
       flightNumberFirstLeg = value;
     } else {
       _flightNumber = value;
@@ -26,7 +32,7 @@ class ContributorFormState {
   }
 
   void updateFlightNumber(String number) {
-    if (hasLayover) {
+    if (numberOfLayovers > 0) {
       flightNumberFirstLeg = number.toUpperCase();
     } else {
       _flightNumber = number.toUpperCase();
@@ -41,6 +47,10 @@ class ContributorFormState {
     flightNumberSecondLeg = number.toUpperCase();
   }
 
+  void updateFlightNumberThirdLeg(String number) {
+    flightNumberThirdLeg = number.toUpperCase();
+  }
+
   void updatePartySize(int size) {
     partySize = size;
   }
@@ -53,9 +63,15 @@ class ContributorFormState {
     arrivalAirport = airport;
   }
 
-  void updateLayoverAirport(Airport? airport) {
-    layoverAirport = airport;
-    hasLayover = true;
+  void updateFirstLayoverAirport(Airport? airport) {
+    firstLayoverAirport = airport;
+    numberOfLayovers =
+        airport != null ? max(numberOfLayovers, 1) : numberOfLayovers;
+  }
+
+  void updateSecondLayoverAirport(Airport? airport) {
+    secondLayoverAirport = airport;
+    numberOfLayovers = airport != null ? 2 : numberOfLayovers;
   }
 
   void updateFlightDateTimeFirstLeg(DateTime dateTime) {
@@ -66,11 +82,18 @@ class ContributorFormState {
     flightDateTimeSecondLeg = dateTime;
   }
 
-  void removeLayover() {
-    layoverAirport = null;
-    hasLayover = false;
+  void updateFlightDateTimeThirdLeg(DateTime dateTime) {
+    flightDateTimeThirdLeg = dateTime;
+  }
+
+  void removeLayovers() {
+    firstLayoverAirport = null;
+    secondLayoverAirport = null;
+    numberOfLayovers = 0;
     flightNumberSecondLeg = '';
+    flightNumberThirdLeg = '';
     flightDateTimeSecondLeg = null;
+    flightDateTimeThirdLeg = null;
   }
 
   void setUserContactInfo(String userEmail) {
@@ -78,12 +101,24 @@ class ContributorFormState {
   }
 
   bool isFlightInfoValid() {
-    if (hasLayover) {
+    if (numberOfLayovers == 2) {
+      return flightNumberFirstLeg.isNotEmpty &&
+          flightNumberSecondLeg.isNotEmpty &&
+          flightNumberThirdLeg.isNotEmpty &&
+          departureAirport != null &&
+          arrivalAirport != null &&
+          firstLayoverAirport != null &&
+          secondLayoverAirport != null &&
+          flightDateTimeFirstLeg != null &&
+          flightDateTimeSecondLeg != null &&
+          flightDateTimeThirdLeg != null &&
+          partySize > 0;
+    } else if (numberOfLayovers == 1) {
       return flightNumberFirstLeg.isNotEmpty &&
           flightNumberSecondLeg.isNotEmpty &&
           departureAirport != null &&
           arrivalAirport != null &&
-          layoverAirport != null &&
+          firstLayoverAirport != null &&
           flightDateTimeFirstLeg != null &&
           flightDateTimeSecondLeg != null &&
           partySize > 0;
@@ -101,14 +136,17 @@ class ContributorFormState {
   }
 
   factory ContributorFormState.fromMap(Map<String, dynamic> map) {
-    final hasLayover = map['hasLayover'] ?? false;
+    final numberOfLayovers = map['numberOfLayovers'] ?? 0;
 
     var state = ContributorFormState()
-      ..flightNumber = hasLayover ? '' : (map['flightNumberFirstLeg'] ?? '')
+      ..flightNumber =
+          numberOfLayovers > 0 ? '' : (map['flightNumberFirstLeg'] ?? '')
       ..flightNumberFirstLeg =
-          hasLayover ? (map['flightNumberFirstLeg'] ?? '') : ''
+          numberOfLayovers > 0 ? (map['flightNumberFirstLeg'] ?? '') : ''
       ..flightNumberSecondLeg =
-          hasLayover ? (map['flightNumberSecondLeg'] ?? '') : ''
+          numberOfLayovers > 1 ? (map['flightNumberSecondLeg'] ?? '') : ''
+      ..flightNumberThirdLeg =
+          numberOfLayovers > 2 ? (map['flightNumberThirdLeg'] ?? '') : ''
       ..partySize = map['partySize'] ?? 1
       ..departureAirport = map['departureAirport'] != null
           ? Airport.fromMap(map['departureAirport'])
@@ -116,15 +154,23 @@ class ContributorFormState {
       ..arrivalAirport = map['arrivalAirport'] != null
           ? Airport.fromMap(map['arrivalAirport'])
           : null
-      ..layoverAirport = hasLayover && map['layoverAirport'] != null
-          ? Airport.fromMap(map['layoverAirport'])
-          : null
-      ..hasLayover = hasLayover
+      ..firstLayoverAirport =
+          numberOfLayovers > 0 && map['firstLayoverAirport'] != null
+              ? Airport.fromMap(map['firstLayoverAirport'])
+              : null
+      ..secondLayoverAirport =
+          numberOfLayovers > 1 && map['secondLayoverAirport'] != null
+              ? Airport.fromMap(map['secondLayoverAirport'])
+              : null
+      ..numberOfLayovers = numberOfLayovers
       ..email = map['userEmail'] ?? ''
       ..flightDateTimeFirstLeg =
           (map['flightDateTimeFirstLeg'] as Timestamp?)?.toDate()
-      ..flightDateTimeSecondLeg = hasLayover
+      ..flightDateTimeSecondLeg = numberOfLayovers > 0
           ? (map['flightDateTimeSecondLeg'] as Timestamp?)?.toDate()
+          : null
+      ..flightDateTimeThirdLeg = numberOfLayovers > 1
+          ? (map['flightDateTimeThirdLeg'] as Timestamp?)?.toDate()
           : null;
 
     return state;
@@ -132,39 +178,50 @@ class ContributorFormState {
 
   Map<String, dynamic> toMap() {
     final map = {
-      'flightNumberFirstLeg': hasLayover ? flightNumberFirstLeg : flightNumber,
+      'flightNumberFirstLeg':
+          numberOfLayovers > 0 ? flightNumberFirstLeg : flightNumber,
       'partySize': partySize,
       'departureAirport': departureAirport?.toJson(),
       'arrivalAirport': arrivalAirport?.toJson(),
-      'hasLayover': hasLayover,
+      'numberOfLayovers': numberOfLayovers,
       'userEmail': email,
       'flightDateTimeFirstLeg': flightDateTimeFirstLeg != null
           ? Timestamp.fromDate(flightDateTimeFirstLeg!)
           : null,
     };
 
-    if (hasLayover) {
+    if (numberOfLayovers > 0) {
       map['flightNumberSecondLeg'] = flightNumberSecondLeg;
-      map['layoverAirport'] = layoverAirport?.toJson();
+      map['firstLayoverAirport'] = firstLayoverAirport?.toJson();
       map['flightDateTimeSecondLeg'] = flightDateTimeSecondLeg != null
           ? Timestamp.fromDate(flightDateTimeSecondLeg!)
           : null;
     }
+
+    if (numberOfLayovers > 1) {
+      map['flightNumberThirdLeg'] = flightNumberThirdLeg;
+      map['secondLayoverAirport'] = secondLayoverAirport?.toJson();
+      map['flightDateTimeThirdLeg'] = flightDateTimeThirdLeg != null
+          ? Timestamp.fromDate(flightDateTimeThirdLeg!)
+          : null;
+    }
+
     return map;
   }
 
   void updateFromMap(Map<String, dynamic> map) {
-    hasLayover = map['hasLayover'] ?? false;
-    if (hasLayover) {
+    numberOfLayovers = map['numberOfLayovers'] ?? 0;
+    if (numberOfLayovers > 0) {
       flightNumberFirstLeg = map['flightNumberFirstLeg'] ?? '';
       flightNumberSecondLeg = map['flightNumberSecondLeg'] ?? '';
     } else {
       _flightNumber = map['flightNumberFirstLeg'] ?? '';
     }
 
-    flightNumber = map['flightNumberFirstLeg'] ?? '';
-    flightNumberFirstLeg = map['flightNumberFirstLeg'] ?? '';
-    flightNumberSecondLeg = map['flightNumberSecondLeg'] ?? '';
+    if (numberOfLayovers > 1) {
+      flightNumberThirdLeg = map['flightNumberThirdLeg'] ?? '';
+    }
+
     partySize = map['partySize'] ?? 1;
     departureAirport = map['departureAirport'] != null
         ? Airport.fromMap(map['departureAirport'])
@@ -172,15 +229,20 @@ class ContributorFormState {
     arrivalAirport = map['arrivalAirport'] != null
         ? Airport.fromMap(map['arrivalAirport'])
         : null;
-    layoverAirport = map['layoverAirport'] != null
-        ? Airport.fromMap(map['layoverAirport'])
+    firstLayoverAirport = map['firstLayoverAirport'] != null
+        ? Airport.fromMap(map['firstLayoverAirport'])
         : null;
-    hasLayover = map['hasLayover'] ?? false;
+    secondLayoverAirport = map['secondLayoverAirport'] != null
+        ? Airport.fromMap(map['secondLayoverAirport'])
+        : null;
     email = map['userEmail'] ?? '';
     flightDateTimeFirstLeg =
         (map['flightDateTimeFirstLeg'] as Timestamp?)?.toDate();
-    flightDateTimeSecondLeg = hasLayover
+    flightDateTimeSecondLeg = numberOfLayovers > 0
         ? (map['flightDateTimeSecondLeg'] as Timestamp?)?.toDate()
+        : null;
+    flightDateTimeThirdLeg = numberOfLayovers > 1
+        ? (map['flightDateTimeThirdLeg'] as Timestamp?)?.toDate()
         : null;
   }
 }

@@ -6,6 +6,7 @@ import 'package:pathpal/screens/privacy_policy_screen.dart';
 import 'package:pathpal/screens/terms_conditions_screen.dart';
 import 'package:pathpal/services/google_auth_flow.dart';
 import 'package:pathpal/widgets/login_tile.dart';
+import 'dart:io' show Platform;
 
 class AuthForm extends StatefulWidget {
   final bool isLogin;
@@ -14,6 +15,7 @@ class AuthForm extends StatefulWidget {
   final VoidCallback onToggleAuthMode;
   final VoidCallback onForgotPassword;
   final Function() onResendVerificationEmail;
+  final GoogleAuthFlow googleAuthFlow;
 
   const AuthForm({
     super.key,
@@ -23,6 +25,7 @@ class AuthForm extends StatefulWidget {
     required this.onToggleAuthMode,
     required this.onForgotPassword,
     required this.onResendVerificationEmail,
+    required this.googleAuthFlow,
   });
 
   @override
@@ -38,7 +41,6 @@ class _AuthFormState extends State<AuthForm> {
   var _enteredName = "";
   var _passwordVisible = false;
   Country? country;
-  final GoogleAuthFlow _googleAuthFlow = GoogleAuthFlow();
 
   @override
   void initState() {
@@ -62,7 +64,7 @@ class _AuthFormState extends State<AuthForm> {
     _safeSetState(() {});
 
     try {
-      final user = await _googleAuthFlow.startAuthFlow(context);
+      final user = await widget.googleAuthFlow.startAuthFlow(context);
       if (user != null) {
         print('Successfully signed in with Google: ${user.displayName}');
       }
@@ -304,7 +306,7 @@ class _AuthFormState extends State<AuthForm> {
                   ),
                 ],
               ),
-              if (widget.isLogin) ...[
+              if (widget.isLogin && Platform.isIOS) ...[
                 const SizedBox(height: 10),
                 Row(
                   children: [

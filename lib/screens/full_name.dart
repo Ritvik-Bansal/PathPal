@@ -40,7 +40,7 @@ class _FullNameScreenState extends State<FullNameScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Theme.of(context).colorScheme.surface,
-      appBar: AppBar(title: Text('Addiitonal Information')),
+      appBar: AppBar(title: Text('Additonal Information')),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Form(

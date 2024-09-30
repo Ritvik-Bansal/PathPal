@@ -4,7 +4,9 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:intl/intl.dart';
 import 'package:pathpal/contributor/contributor_detail_screen.dart';
 import 'package:pathpal/contributor/contributor_form_screen.dart';
+import 'package:pathpal/contributor/filtered_contributors_screen.dart';
 import 'package:pathpal/data/airline_data.dart';
+import 'package:pathpal/receiver/receiver_form_state.dart';
 import 'package:pathpal/receiver/reciever_form_screen.dart';
 import 'package:pathpal/services/firestore_service.dart';
 
@@ -189,7 +191,7 @@ class _MyStuffScreenState extends State<MyStuffScreen> {
                       return AlertDialog(
                         title: Text('My Requests'),
                         content:
-                            Text('My tentative flights requests from the past'),
+                            Text('My seeker flight requests from the past'),
                         actions: [
                           TextButton(
                             child: Text('OK'),
@@ -218,10 +220,24 @@ class _MyStuffScreenState extends State<MyStuffScreen> {
               docId: doc.id,
               onDelete: () => _deleteTentativeRequest(doc.id),
               onEdit: () => _editTentativeRequest(doc.id, data),
+              onTap: () => _navigateToFilteredContributors(data),
             );
           },
         ),
       ],
+    );
+  }
+
+  void _navigateToFilteredContributors(Map<String, dynamic> data) {
+    ReceiverFormState formState = ReceiverFormState();
+    formState.updateFromMap(data);
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => FilteredContributorsScreen(
+          receiverFormState: formState,
+        ),
+      ),
     );
   }
 
@@ -246,7 +262,7 @@ class _MyStuffScreenState extends State<MyStuffScreen> {
           backgroundColor: Theme.of(context).colorScheme.surface,
           title: const Text('Confirm Deletion'),
           content: const Text(
-              'Are you sure you want to delete this tentative request?'),
+              'Are you sure you want to delete this seeker request?'),
           actions: <Widget>[
             TextButton(
               child: const Text('Cancel'),
@@ -260,14 +276,13 @@ class _MyStuffScreenState extends State<MyStuffScreen> {
                   Navigator.of(context).pop();
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(
-                        content:
-                            Text('Tentative request deleted successfully')),
+                        content: Text('Seeker request deleted successfully')),
                   );
                 } catch (e) {
-                  print('Error deleting tentative request: $e');
+                  print('Error deleting seeker request: $e');
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(
-                        content: Text('Error deleting tentative request')),
+                        content: Text('Error deleting seeker request')),
                   );
                 }
                 setState(() {});
@@ -500,11 +515,16 @@ class ContributorFormCard extends StatelessWidget {
   Widget build(BuildContext context) {
     String from = data['departureAirport']?['iata'] ?? 'Unknown';
     String to = data['arrivalAirport']?['iata'] ?? 'Unknown';
-    String? via = data['layoverAirport']?['iata'];
+    int numberOfLayovers = data['numberOfLayovers'] ?? 0;
 
     String flightRoute = '$from to $to';
-    if (via != null) {
+    if (numberOfLayovers > 0) {
+      String via = data['firstLayoverAirport']?['iata'] ?? 'Unknown';
       flightRoute += ' via $via';
+      if (numberOfLayovers > 1) {
+        String secondVia = data['secondLayoverAirport']?['iata'] ?? 'Unknown';
+        flightRoute += ' & $secondVia';
+      }
     }
 
     return Container(
@@ -601,13 +621,19 @@ class FavoritedContributorCard extends StatelessWidget {
   Widget build(BuildContext context) {
     String from = contributorData['departureAirport']?['iata'] ?? 'Unknown';
     String to = contributorData['arrivalAirport']?['iata'] ?? 'Unknown';
-    String? via = contributorData['layoverAirport']?['iata'];
+    int numberOfLayovers = contributorData['numberOfLayovers'] ?? 0;
     DateTime flightDate =
         (contributorData['flightDateTimeFirstLeg'] as Timestamp).toDate();
 
     String flightRoute = '$from to $to';
-    if (via != null) {
+    if (numberOfLayovers > 0) {
+      String via = contributorData['firstLayoverAirport']?['iata'] ?? 'Unknown';
       flightRoute += ' via $via';
+      if (numberOfLayovers > 1) {
+        String secondVia =
+            contributorData['secondLayoverAirport']?['iata'] ?? 'Unknown';
+        flightRoute += ' & $secondVia';
+      }
     }
 
     return Container(
@@ -681,6 +707,7 @@ class TentativeRequestCard extends StatelessWidget {
   final String docId;
   final VoidCallback onDelete;
   final VoidCallback onEdit;
+  final VoidCallback onTap;
 
   const TentativeRequestCard({
     Key? key,
@@ -688,6 +715,7 @@ class TentativeRequestCard extends StatelessWidget {
     required this.docId,
     required this.onDelete,
     required this.onEdit,
+    required this.onTap,
   }) : super(key: key);
 
   @override
@@ -708,47 +736,50 @@ class TentativeRequestCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(30),
         color: Theme.of(context).colorScheme.surface,
       ),
-      child: Row(
-        children: [
-          const SizedBox(width: 5),
-          const CircleAvatar(
-            backgroundColor: Color.fromARGB(255, 180, 221, 255),
-            child: Icon(Icons.flight),
-          ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+      child: InkWell(
+        onTap: onTap,
+        child: Row(
+          children: [
+            const SizedBox(width: 5),
+            const CircleAvatar(
+              backgroundColor: Color.fromARGB(255, 180, 221, 255),
+              child: Icon(Icons.flight),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    '$from to $to',
+                    style: const TextStyle(
+                        fontWeight: FontWeight.bold, fontSize: 18),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    '${DateFormat("MMM d").format(startDate)} - ${DateFormat("MMM d").format(endDate)}',
+                    style: const TextStyle(fontSize: 16),
+                  ),
+                ],
+              ),
+            ),
+            Row(
               children: [
-                Text(
-                  '$from to $to',
-                  style: const TextStyle(
-                      fontWeight: FontWeight.bold, fontSize: 18),
+                IconButton(
+                  icon: const Icon(Icons.edit),
+                  onPressed: onEdit,
                 ),
-                const SizedBox(height: 4),
-                Text(
-                  '${DateFormat("MMM d, yyyy").format(startDate)} - ${DateFormat("MMM d, yyyy").format(endDate)}',
-                  style: const TextStyle(fontSize: 16),
+                IconButton(
+                  icon: const Icon(
+                    Icons.delete,
+                    color: Colors.red,
+                  ),
+                  onPressed: onDelete,
                 ),
               ],
             ),
-          ),
-          Row(
-            children: [
-              IconButton(
-                icon: const Icon(Icons.edit),
-                onPressed: onEdit,
-              ),
-              IconButton(
-                icon: const Icon(
-                  Icons.delete,
-                  color: Colors.red,
-                ),
-                onPressed: onDelete,
-              ),
-            ],
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

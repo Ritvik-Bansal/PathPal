@@ -70,27 +70,53 @@ class MyApp extends StatelessWidget {
         stream: FirebaseAuth.instance.authStateChanges(),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
-            return _buildLoadingScreen();
+            return Scaffold(
+              backgroundColor: Theme.of(context).colorScheme.surface,
+              body: const Center(child: CircularProgressIndicator()),
+            );
           }
           if (snapshot.hasData) {
-            return FutureBuilder<DocumentSnapshot>(
-              future: FirebaseFirestore.instance
-                  .collection('users')
-                  .doc(snapshot.data!.uid)
-                  .get(),
+            return FutureBuilder<User?>(
+              future: FirebaseAuth.instance.currentUser
+                  ?.reload()
+                  .then((_) => FirebaseAuth.instance.currentUser),
               builder: (context, userSnapshot) {
                 if (userSnapshot.connectionState == ConnectionState.waiting) {
-                  return _buildLoadingScreen();
+                  return Scaffold(
+                    backgroundColor: Theme.of(context).colorScheme.surface,
+                    body: const Center(child: CircularProgressIndicator()),
+                  );
                 }
-                if (userSnapshot.hasData && userSnapshot.data!.exists) {
-                  final userData =
-                      userSnapshot.data!.data() as Map<String, dynamic>;
-                  final fullName = userData['name'] as String?;
-                  if (fullName == null || !fullName.contains(' ')) {
-                    return FullNameScreen(user: snapshot.data!);
-                  }
-                  if (snapshot.data!.emailVerified) {
-                    return const Tabs();
+                if (userSnapshot.hasData) {
+                  if (userSnapshot.data!.emailVerified) {
+                    return FutureBuilder<DocumentSnapshot>(
+                      future: FirebaseFirestore.instance
+                          .collection('users')
+                          .doc(userSnapshot.data!.uid)
+                          .get(),
+                      builder: (context, docSnapshot) {
+                        if (docSnapshot.connectionState ==
+                            ConnectionState.waiting) {
+                          return Scaffold(
+                            backgroundColor:
+                                Theme.of(context).colorScheme.surface,
+                            body: const Center(
+                                child: CircularProgressIndicator()),
+                          );
+                        }
+                        if (docSnapshot.hasData) {
+                          final userData =
+                              docSnapshot.data!.data() as Map<String, dynamic>?;
+                          final name = userData?['name'] as String?;
+                          if (name != null && name.trim().contains(' ')) {
+                            return const Tabs();
+                          } else {
+                            return FullNameScreen(user: userSnapshot.data!);
+                          }
+                        }
+                        return const AuthScreen();
+                      },
+                    );
                   } else {
                     return const EmailVerificationScreen();
                   }
@@ -101,15 +127,6 @@ class MyApp extends StatelessWidget {
           }
           return const AuthScreen();
         },
-      ),
-    );
-  }
-
-  Widget _buildLoadingScreen() {
-    return Scaffold(
-      backgroundColor: Colors.white,
-      body: Center(
-        child: CircularProgressIndicator(),
       ),
     );
   }

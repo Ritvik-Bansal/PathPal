@@ -14,6 +14,15 @@ class DateSelectionPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    String yearCutDate = "";
+    if (formState.selectedDateRange.isNotEmpty) {
+      final String fullDate = formState.selectedDateRange.toString();
+      List<String> listData = fullDate.split(' - ');
+      String first = listData[0].substring(5);
+      String second = listData[1].substring(5);
+      yearCutDate = first + ' - ' + second;
+    }
+
     return Form(
       child: Padding(
         padding: const EdgeInsets.all(16.0),
@@ -25,8 +34,10 @@ class DateSelectionPage extends StatelessWidget {
               style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
             ),
             TextFormField(
-              controller:
-                  TextEditingController(text: formState.selectedDateRange),
+              controller: TextEditingController(
+                  text: yearCutDate.isNotEmpty
+                      ? yearCutDate
+                      : formState.selectedDateRange),
               readOnly: true,
               decoration: InputDecoration(
                 labelText: 'Please select your preferred dates of travel',

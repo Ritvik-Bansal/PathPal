@@ -48,7 +48,7 @@ class _TentativeReceiverDetailScreenState
     return Scaffold(
       backgroundColor: Theme.of(context).colorScheme.surface,
       appBar: AppBar(
-        title: Text('Tentative Receiver Details'),
+        title: Text('Seeker Details'),
       ),
       body: SingleChildScrollView(
         padding: EdgeInsets.all(16),
@@ -66,25 +66,8 @@ class _TentativeReceiverDetailScreenState
                   ),
                 ),
               ),
-            _buildInfoSection('Personal Information', [
-              'Name: ${widget.receiverData['userName']}',
-              'Email: ${widget.receiverData['userEmail']}',
-              'Phone: ${widget.receiverData['userPhone']}',
-            ]),
-            SizedBox(height: 20),
-            _buildInfoSection('Travel Details', [
-              'Start Date: ${DateFormat('MMM d, yyyy').format(widget.receiverData['startDate'].toDate())}',
-              'End Date: ${DateFormat('MMM d, yyyy').format(widget.receiverData['endDate'].toDate())}',
-              'Party Size: ${widget.receiverData['partySize']}',
-            ]),
-            SizedBox(height: 20),
-            _buildInfoSection('Assistance Details', [
-              'Reason: ${widget.receiverData['reason']}',
-              if (widget.receiverData['otherReason'] != null &&
-                  widget.receiverData['otherReason'].isNotEmpty)
-                'Other Reason: ${widget.receiverData['otherReason']}',
-            ]),
-            SizedBox(height: 30),
+            _buildTravelRoute(),
+            const SizedBox(height: 20),
             Center(
               child: ElevatedButton(
                 onPressed: () => _showContactConfirmationDialog(context),
@@ -92,7 +75,7 @@ class _TentativeReceiverDetailScreenState
                     ? 'Contact This Receiver Again'
                     : 'Contact This Receiver'),
                 style: ElevatedButton.styleFrom(
-                  padding: EdgeInsets.symmetric(horizontal: 30, vertical: 15),
+                  padding: EdgeInsets.symmetric(horizontal: 50, vertical: 15),
                 ),
               ),
             ),
@@ -102,21 +85,72 @@ class _TentativeReceiverDetailScreenState
     );
   }
 
-  Widget _buildInfoSection(String title, List<String> items) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          title,
-          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-        ),
-        SizedBox(height: 10),
-        ...items.map((item) => Padding(
-              padding: EdgeInsets.only(bottom: 5),
-              child: Text(item),
-            )),
-      ],
+  Widget _buildTravelRoute() {
+    String departureCode = widget.receiverData['startAirport']?['iata'] ?? '';
+    String arrivalCode = widget.receiverData['endAirport']?['iata'] ?? '';
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 10),
+      margin: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        border: Border.all(
+            color: const Color.fromARGB(255, 180, 221, 255), width: 5),
+        borderRadius: BorderRadius.circular(30),
+      ),
+      child: Column(
+        children: [
+          Text(
+            '${widget.receiverData['startAirport']['name']} to ${widget.receiverData['endAirport']['name']}',
+            style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 10),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+            children: [
+              Text(
+                departureCode,
+                style:
+                    const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+              ),
+              Transform.rotate(
+                angle: 90 * 3.14159 / 180,
+                child: const Icon(
+                  Icons.flight_outlined,
+                  size: 30,
+                ),
+              ),
+              Text(
+                arrivalCode,
+                style:
+                    const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+              ),
+            ],
+          ),
+          const SizedBox(height: 15),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Text(
+                'Range: ${_formatDate(widget.receiverData['startDate'])} - ${_formatDate(widget.receiverData['endDate'])}',
+                style: const TextStyle(fontSize: 16),
+              ),
+              const SizedBox(height: 5),
+              Text(
+                'Reason: ${widget.receiverData['reason']}',
+                style: TextStyle(fontSize: 16),
+              ),
+              if (widget.receiverData['otherReason'] != null &&
+                  widget.receiverData['otherReason'].isNotEmpty)
+                Text('Other Reason: ${widget.receiverData['otherReason']}'),
+            ],
+          ),
+        ],
+      ),
     );
+  }
+
+  String _formatDate(Timestamp timestamp) {
+    return DateFormat('MMM d, yyyy').format(timestamp.toDate());
   }
 
   void _showContactConfirmationDialog(BuildContext context) {
@@ -126,7 +160,7 @@ class _TentativeReceiverDetailScreenState
         return AlertDialog(
           title: Text('Contact Confirmation'),
           content: Text(
-            'PathPal will email the tentative receiver with your contact info and travel details. Do you wish to proceed?',
+            'PathPal will email the Seeker receiver with your contact info and travel details. Do you wish to proceed?',
           ),
           actions: <Widget>[
             TextButton(
@@ -160,22 +194,22 @@ class _TentativeReceiverDetailScreenState
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>A Receiver Wants to Connect with You</title>
+  <title>A Seeker Wants to Connect with You</title>
 </head>
 <body style="margin:0; padding:0; background-color:#f7f9fc; font-family: Arial, sans-serif; color:#333;">
   <div style="max-width:600px; margin:20px auto; background-color:#ffffff; border-radius:8px; box-shadow:0 2px 4px rgba(0, 0, 0, 0.1); overflow:hidden;">
     <div style="background-color:#0073e6; color:#ffffff; padding:20px; text-align:center;">
-      <h1 style="margin:0; font-size:28px;">A Receiver Wants to Connect with You</h1>
+      <h1 style="margin:0; font-size:28px;">A Seeker Wants to Connect with You</h1>
     </div>
     <div style="padding:20px;">
       <p style="font-size:16px; line-height:1.5;">
         Hi ${widget.receiverData['userName']},
       </p>
       <p style="font-size:16px; line-height:1.5;">
-        A Receiver has expressed interest in assisting you during your travel from ${widget.receiverData['startAirport']['name']} to ${widget.receiverData['endAirport']['name']}.
+        A Seeker has expressed interest in assisting you during your travel from ${widget.receiverData['startAirport']['name']} to ${widget.receiverData['endAirport']['name']}.
       </p>
       <div style="background-color:#f1f4f8; padding:15px; border-radius:5px; margin:20px 0;">
-        <h2 style="font-size:20px; color:#0073e6; margin-top:0;">Receiver's Details:</h2>
+        <h2 style="font-size:20px; color:#0073e6; margin-top:0;">Seeker's Details:</h2>
         <p style="font-size:16px; line-height:1.5; margin:5px 0;">
           <strong>Name:</strong> ${currentUserData['name']}<br>
           <strong>Email:</strong> ${currentUserData['email']}<br>
@@ -183,7 +217,7 @@ class _TentativeReceiverDetailScreenState
         </p>
       </div>
       <p style="font-size:16px; line-height:1.5;">
-        Please feel free to reach out to the receiver if you would like their assistance during your journey.
+        Please feel free to reach out to the Seeker if you would like their assistance during your journey.
       </p>
       <p style="font-size:16px; line-height:1.5;">
         Thank you for being a part of the PathPal community. We hope this connection enhances your travel experience!
@@ -224,7 +258,7 @@ class _TentativeReceiverDetailScreenState
                   'Name': widget.receiverData['userName']
                 }
               ],
-              'Subject': 'PathPal: A Receiver Wants to Connect',
+              'Subject': 'PathPal: A Seeker Wants to Connect',
               'HTMLPart': emailContent,
               'CustomID': 'PathPalConnectEmail'
             }
@@ -255,11 +289,11 @@ class _TentativeReceiverDetailScreenState
         String endLocation =
             widget.receiverData['endAirport']['iata'] ?? 'Unknown';
         String notificationBody =
-            'A receiver has expressed interest in your tentative request from $startLocation to $endLocation.';
+            'A Seeker has expressed interest in your seeker request from $startLocation to $endLocation.';
 
         await widget.firestoreService.addNotification(
           widget.receiverData['userId'],
-          'A Fellow Receiver Contacted You',
+          'A Fellow Seeker Contacted You',
           notificationBody,
           receiverDocId: receiverDocId,
         );
@@ -268,9 +302,7 @@ class _TentativeReceiverDetailScreenState
           _hasContacted = true;
         });
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-              content:
-                  Text('Email sent to the tentative receiver successfully')),
+          SnackBar(content: Text('Email sent to the Seeker successfully')),
         );
       } else {
         throw Exception('Failed to send email: ${response.body}');
@@ -278,8 +310,7 @@ class _TentativeReceiverDetailScreenState
     } catch (e) {
       print('Error sending email: $e');
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-            content: Text('Error sending email to the tentative receiver')),
+        SnackBar(content: Text('Error sending email to the Seeker')),
       );
     }
   }

@@ -1,13 +1,15 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
-import 'package:pathpal/contributor/tentative_receiver_details_screen.dart';
+import 'package:pathpal/contributor/tentative/tentative_receiver_details_screen.dart';
 import 'package:pathpal/receiver/receiver_form_state.dart';
 import 'package:pathpal/services/firestore_service.dart';
 
 class TentativeReceiversScreen extends StatelessWidget {
   final ReceiverFormState receiverFormState;
   final FirestoreService _firestoreService = FirestoreService();
+  final String currentUserId = FirebaseAuth.instance.currentUser!.uid;
 
   TentativeReceiversScreen({required this.receiverFormState});
 
@@ -23,12 +25,22 @@ class TentativeReceiversScreen extends StatelessWidget {
           return _buildErrorWidget(context, snapshot.error.toString());
         }
         if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-          return Center(child: Text('No tentative receivers found'));
+          return Center(child: Text('No Seekers found'));
         }
+
+        final filteredDocs = snapshot.data!.docs.where((doc) {
+          final receiverData = doc.data() as Map<String, dynamic>;
+          return receiverData['userId'] != currentUserId;
+        }).toList();
+
+        if (filteredDocs.isEmpty) {
+          return Center(child: Text('No Seekers found'));
+        }
+
         return ListView.builder(
-          itemCount: snapshot.data!.docs.length,
+          itemCount: filteredDocs.length,
           itemBuilder: (context, index) {
-            var receiver = snapshot.data!.docs[index];
+            var receiver = filteredDocs[index];
             var receiverData = receiver.data() as Map<String, dynamic>;
             return FutureBuilder<DocumentSnapshot>(
               future: FirebaseFirestore.instance

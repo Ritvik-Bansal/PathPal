@@ -90,7 +90,16 @@ class MapWidget extends StatelessWidget {
     }
 
     addCoordinate(contributorData['departureAirport']);
-    addCoordinate(contributorData['layoverAirport']);
+
+    // Check for layovers and add them
+    int numberOfLayovers = contributorData['numberOfLayovers'] ?? 0;
+    if (numberOfLayovers > 0) {
+      addCoordinate(contributorData['firstLayoverAirport']);
+      if (numberOfLayovers > 1) {
+        addCoordinate(contributorData['secondLayoverAirport']);
+      }
+    }
+
     addCoordinate(contributorData['arrivalAirport']);
 
     return coordinates
@@ -99,35 +108,36 @@ class MapWidget extends StatelessWidget {
   }
 
   List<Polyline> _createCurvedLines(List<LatLng> points) {
-    return [
-      Polyline(
-        points: _generateCurvedPath(points),
-        strokeWidth: 3,
-        color: Colors.blue,
-      )
-    ];
+    List<Polyline> polylines = [];
+    for (int i = 0; i < points.length - 1; i++) {
+      polylines.add(
+        Polyline(
+          points: _generateCurvedPath([points[i], points[i + 1]]),
+          strokeWidth: 3,
+          color: Colors.blue,
+        ),
+      );
+    }
+    return polylines;
   }
 
   List<LatLng> _generateCurvedPath(List<LatLng> points) {
     if (points.length < 2) return points;
 
+    LatLng start = points[0];
+    LatLng end = points[1];
+
+    double distance = _calculateDistance(start, end);
+    double curveHeight = distance * 0.0007;
+
+    LatLng controlPoint = _intermediatePoint(start, end, 0.5, curveHeight);
+
     List<LatLng> curvedPath = [];
-    for (int i = 0; i < points.length - 1; i++) {
-      LatLng start = points[i];
-      LatLng end = points[i + 1];
-
-      double distance = _calculateDistance(start, end);
-
-      double curveHeight = distance * 0.0007;
-
-      LatLng controlPoint = _intermediatePoint(start, end, 0.5, curveHeight);
-
-      int numPoints = 100;
-      for (int j = 0; j <= numPoints; j++) {
-        double t = j / numPoints;
-        LatLng point = _quadraticBezier(start, controlPoint, end, t);
-        curvedPath.add(point);
-      }
+    int numPoints = 100;
+    for (int j = 0; j <= numPoints; j++) {
+      double t = j / numPoints;
+      LatLng point = _quadraticBezier(start, controlPoint, end, t);
+      curvedPath.add(point);
     }
 
     return curvedPath;

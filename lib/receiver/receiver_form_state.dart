@@ -20,6 +20,7 @@ class ReceiverFormState {
   String phoneNumber = '';
   DateTime? startDate;
   DateTime? endDate;
+  String displayDateRange = '';
 
   void submit() {
     _submitted = true;
@@ -105,8 +106,14 @@ class ReceiverFormState {
     email = enteredEmail;
   }
 
-  void updatePhoneNumber(String phone) {
-    phoneNumber = phone;
+  void updatePhoneNumber(String phoneNumber) {
+    String digitsOnly = phoneNumber.replaceAll(RegExp(r'\D'), '');
+    if (digitsOnly.length >= 10) {
+      this.phoneNumber =
+          '+${digitsOnly.substring(0, digitsOnly.length - 10)} ${digitsOnly.substring(digitsOnly.length - 10)}';
+    } else {
+      this.phoneNumber = phoneNumber;
+    }
   }
 
   void updateFromExistingForm(DocumentSnapshot existingForm) {

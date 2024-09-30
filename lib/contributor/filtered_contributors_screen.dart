@@ -1,7 +1,8 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
-import 'package:pathpal/contributor/tentative_receiver_screen.dart';
+import 'package:pathpal/contributor/tentative/tentative_receiver_screen.dart';
 import 'package:pathpal/receiver/receiver_form_state.dart';
 import 'package:pathpal/services/firestore_service.dart';
 import 'contributor_detail_screen.dart';
@@ -22,6 +23,7 @@ class _FilteredContributorsScreenState
   final AirlineFetcher _airlineFetcher = AirlineFetcher();
   bool _isLoading = true;
   final FirestoreService _firestoreService = FirestoreService();
+  final String currentUserId = FirebaseAuth.instance.currentUser!.uid;
 
   @override
   void initState() {
@@ -68,11 +70,11 @@ class _FilteredContributorsScreenState
         backgroundColor: Theme.of(context).colorScheme.surface,
         appBar: AppBar(
           title: Text(
-              'Flights from ${widget.receiverFormState.startAirport?.iata.toString() ?? 'Unknown'} to ${widget.receiverFormState.endAirport?.iata.toString() ?? 'Unknown'}'),
+              'Search Results from ${widget.receiverFormState.startAirport?.iata.toString() ?? 'Unknown'} to ${widget.receiverFormState.endAirport?.iata.toString() ?? 'Unknown'}'),
           bottom: TabBar(
             tabs: [
               Tab(text: 'Volunteers'),
-              Tab(text: 'Tentative Receivers'),
+              Tab(text: 'Seekers'),
             ],
           ),
         ),
@@ -83,7 +85,49 @@ class _FilteredContributorsScreenState
                 receiverFormState: widget.receiverFormState),
           ],
         ),
+        floatingActionButton: FloatingActionButton.extended(
+          onPressed: () => _showAddTentativeRequestDialog(),
+          icon: Icon(Icons.add),
+          label: Text('Add Request'),
+        ),
       ),
+    );
+  }
+
+  void _showAddTentativeRequestDialog() {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text('Add Seeker Request'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Adding a request allows you to indicate interest in connecting with other people looking for help. You will also be notified if a match with a future volunteer is found.',
+              ),
+              SizedBox(height: 16),
+              Text(
+                'Do you want to add your request to the Seeker list?',
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              child: Text('Cancel'),
+              onPressed: () => Navigator.of(context).pop(),
+            ),
+            ElevatedButton(
+              child: Text('Add Request'),
+              onPressed: () {
+                Navigator.of(context).pop();
+                _addOrUpdateTentativeList();
+              },
+            ),
+          ],
+        );
+      },
     );
   }
 
@@ -102,20 +146,20 @@ class _FilteredContributorsScreenState
           .addOrUpdateTentativeReceiver(widget.receiverFormState);
       if (hasExistingRequest) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Tentative request updated successfully')),
+          SnackBar(content: Text('Seeker request updated successfully')),
         );
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Tentative request added successfully')),
+          SnackBar(content: Text('Seeker request added successfully')),
         );
       }
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-            content: Text(
-                'Error adding/updating tentative request: ${e.toString()}')),
+            content:
+                Text('Error adding/updating Seeker request: ${e.toString()}')),
       );
-      print('Error adding/updating tentative request: $e');
+      print('Error adding/updating Seeker request: $e');
     }
   }
 
@@ -137,7 +181,14 @@ class _FilteredContributorsScreenState
                 print(snapshot.error);
                 return Center(child: Text('Error: ${snapshot.error}'));
               }
-              if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+              final filteredDocs = snapshot.data!.docs.where((doc) {
+                final contributorData = doc.data() as Map<String, dynamic>;
+                return contributorData['userId'] != currentUserId;
+              }).toList();
+
+              if (!snapshot.hasData ||
+                  snapshot.data!.docs.isEmpty ||
+                  filteredDocs.isEmpty) {
                 return Center(
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
@@ -146,50 +197,14 @@ class _FilteredContributorsScreenState
                         'No matching volunteers found',
                         style: TextStyle(fontSize: 16),
                       ),
-                      SizedBox(height: 40),
-                      FutureBuilder<bool>(
-                        future: _hasExistingTentativeRequest(),
-                        builder: (context, snapshot) {
-                          if (snapshot.connectionState ==
-                              ConnectionState.waiting) {
-                            return CircularProgressIndicator();
-                          }
-
-                          bool hasExistingRequest = snapshot.data ?? false;
-                          return Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              ElevatedButton(
-                                onPressed: _addOrUpdateTentativeList,
-                                child: Text(
-                                  hasExistingRequest
-                                      ? 'Update Tentative Request'
-                                      : 'Add Tentative Request',
-                                ),
-                              ),
-                              SizedBox(width: 8),
-                              Tooltip(
-                                message:
-                                    'The Tentative List allows you to indicate interest in connecting with other people looking for help. You will also be notified if a match with a future volunteer is found',
-                                child: IconButton(
-                                  icon: Icon(Icons.info_outline),
-                                  onPressed: () {
-                                    _showTentativeListInfo(context);
-                                  },
-                                ),
-                              ),
-                            ],
-                          );
-                        },
-                      ),
                     ],
                   ),
                 );
               }
               return ListView.builder(
-                itemCount: snapshot.data!.docs.length,
+                itemCount: filteredDocs.length,
                 itemBuilder: (context, index) {
-                  var contributor = snapshot.data!.docs[index];
+                  var contributor = filteredDocs[index];
                   var contributorData =
                       contributor.data() as Map<String, dynamic>;
                   return FutureBuilder<DocumentSnapshot>(
@@ -211,9 +226,19 @@ class _FilteredContributorsScreenState
                       }
                       var userData =
                           userSnapshot.data!.data() as Map<String, dynamic>;
+
+                      List<String?> layovers = [];
+                      if (contributorData['firstLayoverAirport'] != null) {
+                        layovers.add(
+                            contributorData['firstLayoverAirport']['iata']);
+                      }
+                      if (contributorData['secondLayoverAirport'] != null) {
+                        layovers.add(
+                            contributorData['secondLayoverAirport']['iata']);
+                      }
+
                       return ContributorCard(
-                        layover:
-                            contributorData['layoverAirport']?['city'] ?? 'N/A',
+                        layovers: layovers,
                         airline: contributorData['flightNumberFirstLeg'] ?? '',
                         profilePicture: userData['profile_picture'] ?? '',
                         flightDate: (contributorData['flightDateTimeFirstLeg']
@@ -248,28 +273,6 @@ class _FilteredContributorsScreenState
           );
   }
 
-  void _showTentativeListInfo(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: Text('Tentative List Information'),
-          content: Text(
-            'The Tentative List is a feature that allows you to express interest in connecting with other receivers (people who need help) because there are no current volunteer matching your criteria. By joining this list, you may also be notified if a potential match with a volunteer is found in the future. This increases your chances of finding a match.',
-          ),
-          actions: <Widget>[
-            TextButton(
-              child: Text('Got it'),
-              onPressed: () {
-                Navigator.of(context).pop();
-              },
-            ),
-          ],
-        );
-      },
-    );
-  }
-
   Stream<QuerySnapshot> _getFilteredContributorsStream() {
     if (widget.receiverFormState.startDate == null ||
         widget.receiverFormState.endDate == null ||
@@ -300,7 +303,7 @@ class _FilteredContributorsScreenState
 class ContributorCard extends StatefulWidget {
   final String profilePicture;
   final DateTime flightDate;
-  final String? layover;
+  final List<String?> layovers;
   final String airline;
   final VoidCallback onTap;
   final AirlineFetcher airlineFetcher;
@@ -309,7 +312,7 @@ class ContributorCard extends StatefulWidget {
 
   ContributorCard({
     required this.airline,
-    this.layover,
+    required this.layovers,
     required this.profilePicture,
     required this.flightDate,
     required this.onTap,
@@ -323,22 +326,6 @@ class ContributorCard extends StatefulWidget {
 }
 
 class _ContributorCardState extends State<ContributorCard> {
-  bool _isFavorite = false;
-
-  @override
-  void initState() {
-    super.initState();
-    _checkFavoriteStatus();
-  }
-
-  Future<void> _checkFavoriteStatus() async {
-    bool isFavorite = await widget.firestoreService
-        .isContributorFavorited(widget.contributorId);
-    setState(() {
-      _isFavorite = isFavorite;
-    });
-  }
-
   String _formatAirlineName(String? airlineName) {
     if (airlineName == null) return 'Unknown';
 
@@ -357,17 +344,25 @@ class _ContributorCardState extends State<ContributorCard> {
     return airlineName;
   }
 
+  String _formatLayoverInfo() {
+    if (widget.layovers.isEmpty || widget.layovers.every((l) => l == null)) {
+      return 'Direct';
+    } else if (widget.layovers.length == 1) {
+      return 'via ${widget.layovers[0]}';
+    } else {
+      return 'via ${widget.layovers[0]} & ${widget.layovers[1]}';
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     String formattedDate = DateFormat('MMM d').format(widget.flightDate);
-    String formattedTime = DateFormat('h:mm a').format(widget.flightDate);
     String iataCode = widget.airline.substring(0, 2).toUpperCase();
     String? airlineName = widget.airlineFetcher.getAirlineName(iataCode);
     String formattedAirlineName = _formatAirlineName(airlineName);
+    String layoverInfo = _formatLayoverInfo();
 
-    String text = widget.layover == "N/A"
-        ? '$formattedAirlineName• $formattedDate • $formattedTime'
-        : '$formattedAirlineName • $formattedDate • via ${widget.layover}';
+    String text = '$formattedAirlineName • $formattedDate • $layoverInfo';
 
     return StreamBuilder<bool>(
       stream: widget.firestoreService

@@ -178,7 +178,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     if (title == 'Potential Volunteer Found') {
       _showContributorDetails(context, notification);
     } else if (title == 'New Contact Request' ||
-        title == 'A Fellow Receiver Contacted You') {
+        title == 'A Fellow Seeker Contacted You') {
       _showReceiverInfo(context, notification);
     }
   }

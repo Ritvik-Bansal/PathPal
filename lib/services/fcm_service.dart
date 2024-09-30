@@ -37,47 +37,40 @@ class EmailService {
         Hi <strong>${userName}</strong>,
       </p>
       <p style="font-size:16px; line-height:1.5;">
-        Great news! A Volunteer has submitted a flight that matches your tentative request.
+        Great news! A Volunteer has submitted a flight that matches your seeker request.
       </p>
       <div style="background-color:#f1f4f8; padding:15px; border-radius:5px; margin:20px 0;">
         <h2 style="font-size:20px; color:#0073e6; margin-top:0;">Flight Details:</h2>
-      ${formState.hasLayover ? '''
-      <table style="width:100%; border-collapse: collapse; margin-top: 10px; margin-bottom: 10px;">
-        <tr style="background-color: #f1f4f8;">
-          <th style="padding: 10px; border: 1px solid #ddd; text-align: left;">Departure</th>
-          <th style="padding: 10px; border: 1px solid #ddd; text-align: left;">Arrival</th>
-          <th style="padding: 10px; border: 1px solid #ddd; text-align: left;">Flight Number</th>
-          <th style="padding: 10px; border: 1px solid #ddd; text-align: left;">Date-Time</th>
-        </tr>
-        <tr>
-          <td style="padding: 10px; border: 1px solid #ddd;">${formState.departureAirport?.city}, ${formState.departureAirport?.country}</td>
-          <td style="padding: 10px; border: 1px solid #ddd;">${formState.layoverAirport?.city}, ${formState.layoverAirport?.country}</td>
-          <td style="padding: 10px; border: 1px solid #ddd;">${formState.flightNumberFirstLeg.toUpperCase()}</td>
-          <td style="padding: 10px; border: 1px solid #ddd;">${formState.flightDateTimeFirstLeg?.toLocal().toString().split(' ')[0]} ${formState.flightDateTimeFirstLeg?.toLocal().toString().split(' ')[1].substring(0, 5)}</td>
-        </tr>
-        <tr>
-          <td style="padding: 10px; border: 1px solid #ddd;">${formState.layoverAirport?.city}, ${formState.layoverAirport?.country}</td>
-          <td style="padding: 10px; border: 1px solid #ddd;">${formState.arrivalAirport?.city}, ${formState.arrivalAirport?.country}</td>
-          <td style="padding: 10px; border: 1px solid #ddd;">${formState.flightNumberSecondLeg.toUpperCase()}</td>
-          <td style="padding: 10px; border: 1px solid #ddd;">${formState.flightDateTimeSecondLeg?.toLocal().toString().split(' ')[0]} ${formState.flightDateTimeSecondLeg?.toLocal().toString().split(' ')[1].substring(0, 5)}</td>
-        </tr>
-      </table>
-      ''' : '''
-      <table style="width:100%; border-collapse: collapse; margin-top: 10px; margin-bottom: 10px;">
-        <tr style="background-color: #f1f4f8;">
-          <th style="padding: 10px; border: 1px solid #ddd; text-align: left;">Departure</th>
-          <th style="padding: 10px; border: 1px solid #ddd; text-align: left;">Arrival</th>
-          <th style="padding: 10px; border: 1px solid #ddd; text-align: left;">Flight Number</th>
-          <th style="padding: 10px; border: 1px solid #ddd; text-align: left;">Date-Time</th>
-        </tr>
-        <tr>
-          <td style="padding: 10px; border: 1px solid #ddd;">${formState.departureAirport?.city}, ${formState.departureAirport?.country}</td>
-          <td style="padding: 10px; border: 1px solid #ddd;">${formState.arrivalAirport?.city}, ${formState.arrivalAirport?.country}</td>
-          <td style="padding: 10px; border: 1px solid #ddd;">${formState.flightNumber.toUpperCase()}</td>
-          <td style="padding: 10px; border: 1px solid #ddd;">${formState.flightDateTimeFirstLeg?.toLocal().toString().split(' ')[0]} ${formState.flightDateTimeFirstLeg?.toLocal().toString().split(' ')[1].substring(0, 5)}</td>
-        </tr>
-      </table>
-      '''}
+        <table style="width:100%; border-collapse: collapse; margin-top: 10px; margin-bottom: 10px;">
+          <tr style="background-color: #f1f4f8;">
+            <th style="padding: 10px; border: 1px solid #ddd; text-align: left;">Departure</th>
+            <th style="padding: 10px; border: 1px solid #ddd; text-align: left;">Arrival</th>
+            <th style="padding: 10px; border: 1px solid #ddd; text-align: left;">Flight Number</th>
+            <th style="padding: 10px; border: 1px solid #ddd; text-align: left;">Date-Time</th>
+          </tr>
+          <tr>
+            <td style="padding: 10px; border: 1px solid #ddd;">${formState.departureAirport?.city}, ${formState.departureAirport?.country}</td>
+            <td style="padding: 10px; border: 1px solid #ddd;">${formState.numberOfLayovers > 0 ? formState.firstLayoverAirport?.city : formState.arrivalAirport?.city}, ${formState.numberOfLayovers > 0 ? formState.firstLayoverAirport?.country : formState.arrivalAirport?.country}</td>
+            <td style="padding: 10px; border: 1px solid #ddd;">${formState.flightNumberFirstLeg}</td>
+            <td style="padding: 10px; border: 1px solid #ddd;">${formState.flightDateTimeFirstLeg?.toLocal().toString().split(' ')[0]} ${formState.flightDateTimeFirstLeg?.toLocal().toString().split(' ')[1].substring(0, 5)}</td>
+          </tr>
+          ${formState.numberOfLayovers > 0 ? '''
+          <tr>
+            <td style="padding: 10px; border: 1px solid #ddd;">${formState.firstLayoverAirport?.city}, ${formState.firstLayoverAirport?.country}</td>
+            <td style="padding: 10px; border: 1px solid #ddd;">${formState.numberOfLayovers > 1 ? formState.secondLayoverAirport?.city : formState.arrivalAirport?.city}, ${formState.numberOfLayovers > 1 ? formState.secondLayoverAirport?.country : formState.arrivalAirport?.country}</td>
+            <td style="padding: 10px; border: 1px solid #ddd;">${formState.flightNumberSecondLeg}</td>
+            <td style="padding: 10px; border: 1px solid #ddd;">${formState.flightDateTimeSecondLeg?.toLocal().toString().split(' ')[0]} ${formState.flightDateTimeSecondLeg?.toLocal().toString().split(' ')[1].substring(0, 5)}</td>
+          </tr>
+          ''' : ''}
+          ${formState.numberOfLayovers > 1 ? '''
+          <tr>
+            <td style="padding: 10px; border: 1px solid #ddd;">${formState.secondLayoverAirport?.city}, ${formState.secondLayoverAirport?.country}</td>
+            <td style="padding: 10px; border: 1px solid #ddd;">${formState.arrivalAirport?.city}, ${formState.arrivalAirport?.country}</td>
+            <td style="padding: 10px; border: 1px solid #ddd;">${formState.flightNumberThirdLeg}</td>
+            <td style="padding: 10px; border: 1px solid #ddd;">${formState.flightDateTimeThirdLeg?.toLocal().toString().split(' ')[0]} ${formState.flightDateTimeThirdLeg?.toLocal().toString().split(' ')[1].substring(0, 5)}</td>
+          </tr>
+          ''' : ''}
+        </table>
       </div>
       <p style="font-size:16px; line-height:1.5;">
         Log in to the PathPal app to view more details and contact the Volunteer if you're interested in connecting.
@@ -133,7 +126,7 @@ class EmailService {
       await _firestoreService.addNotification(
         userId,
         'Potential Volunteer Found',
-        'A Volunteer has submitted a flight that matches your tentative request.',
+        'A Volunteer has submitted a flight that matches your seeker request.',
         contributorDocId: contributorDocId,
       );
 

@@ -32,6 +32,8 @@ class ContributorDetailScreen extends StatefulWidget {
 class _ContributorDetailScreenState extends State<ContributorDetailScreen> {
   bool _isFavorite = false;
   bool _hasContacted = false;
+  bool _canContact = true;
+  Duration? _remainingTime;
   bool _isOwnSubmission = false;
   late FirestoreService _firestoreService;
   bool mounted = true;
@@ -49,6 +51,66 @@ class _ContributorDetailScreenState extends State<ContributorDetailScreen> {
     _checkFavoriteStatus();
     _checkContactStatus();
     _checkIfOwnSubmission();
+    _checkCanContact();
+  }
+
+  Future<void> _checkContactStatus() async {
+    bool hasContacted =
+        await _firestoreService.hasContactedContributor(widget.contributorId);
+    setState(() {
+      _hasContacted = hasContacted;
+    });
+  }
+
+  Future<void> _checkCanContact() async {
+    final result =
+        await _firestoreService.canContactContributor(widget.contributorId);
+    setState(() {
+      _canContact = result['canContact'];
+      _remainingTime = result['remainingTime'];
+    });
+  }
+
+  Future<void> _showContactConfirmationDialog(
+      BuildContext context,
+      Map<String, dynamic> contributorData,
+      Map<String, dynamic> userData) async {
+    if (!_canContact) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+            content: Text(
+                'Please wait 24 hours before contacting this volunteer again.')),
+      );
+      return;
+    }
+
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          backgroundColor: Theme.of(context).colorScheme.surface,
+          title: const Text('Contact Confirmation'),
+          content: const Text(
+            'PathPal will email the volunteer with your contact info and travel details. They will directly reach out to you. Do you wish to proceed?',
+          ),
+          actions: <Widget>[
+            TextButton(
+              child: const Text('Cancel'),
+              onPressed: () => Navigator.of(context).pop(false),
+            ),
+            TextButton(
+              child: const Text('Confirm'),
+              onPressed: () => Navigator.of(context).pop(true),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (result == true) {
+      await _sendEmailToContributor(context, contributorData, userData);
+      _checkCanContact();
+    }
   }
 
   Future<void> _checkIfOwnSubmission() async {
@@ -62,14 +124,6 @@ class _ContributorDetailScreenState extends State<ContributorDetailScreen> {
         });
       }
     }
-  }
-
-  Future<void> _checkContactStatus() async {
-    bool hasContacted =
-        await _firestoreService.hasContactedContributor(widget.contributorId);
-    setState(() {
-      _hasContacted = hasContacted;
-    });
   }
 
   Future<void> _checkFavoriteStatus() async {
@@ -163,15 +217,16 @@ class _ContributorDetailScreenState extends State<ContributorDetailScreen> {
       body: SingleChildScrollView(
         child: Column(
           children: [
-            if (_hasContacted && !_isOwnSubmission)
-              const Padding(
-                padding: EdgeInsets.all(8.0),
+            if (_hasContacted && !_canContact && !_isOwnSubmission)
+              Padding(
+                padding: const EdgeInsets.all(8.0),
                 child: Text(
-                  'You have already contacted this volunteer',
+                  _getRemainingTimeMessage(),
                   style: TextStyle(
-                    color: Colors.green,
+                    color: Colors.orange,
                     fontWeight: FontWeight.bold,
                   ),
+                  textAlign: TextAlign.center,
                 ),
               ),
             _buildFlightRoute(contributorData),
@@ -179,16 +234,18 @@ class _ContributorDetailScreenState extends State<ContributorDetailScreen> {
             MapWidget(contributorData: contributorData),
             const SizedBox(height: 10),
             OutlinedButton(
-              onPressed: _isOwnSubmission
+              onPressed: _isOwnSubmission || !_canContact
                   ? null
                   : () => _showContactConfirmationDialog(
                       context, contributorData, userData),
               style: OutlinedButton.styleFrom(
-                backgroundColor: _isOwnSubmission
+                backgroundColor: _isOwnSubmission || !_canContact
                     ? Colors.grey[300]
                     : const Color.fromARGB(255, 180, 221, 255),
                 textStyle: TextStyle(
-                  color: _isOwnSubmission ? Colors.grey[600] : Colors.black,
+                  color: _isOwnSubmission || !_canContact
+                      ? Colors.grey[600]
+                      : Colors.black,
                   fontWeight: FontWeight.bold,
                   fontSize: 18,
                 ),
@@ -206,35 +263,14 @@ class _ContributorDetailScreenState extends State<ContributorDetailScreen> {
     );
   }
 
-  Future<void> _showContactConfirmationDialog(
-      BuildContext context,
-      Map<String, dynamic> contributorData,
-      Map<String, dynamic> userData) async {
-    final result = await showDialog<bool>(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          backgroundColor: Theme.of(context).colorScheme.surface,
-          title: const Text('Contact Confirmation'),
-          content: const Text(
-            'PathPal will email the volunteer with your contact info and travel details. They will directly reach out to you. Do you wish to proceed?',
-          ),
-          actions: <Widget>[
-            TextButton(
-              child: const Text('Cancel'),
-              onPressed: () => Navigator.of(context).pop(false),
-            ),
-            TextButton(
-              child: const Text('Confirm'),
-              onPressed: () => Navigator.of(context).pop(true),
-            ),
-          ],
-        );
-      },
-    );
-
-    if (result == true) {
-      _sendEmailToContributor(context, contributorData, userData);
+  String _getRemainingTimeMessage() {
+    if (_remainingTime == null) return '';
+    final hours = _remainingTime!.inHours;
+    final minutes = _remainingTime!.inMinutes % 60;
+    if (hours > 0) {
+      return 'You can contact this volunteer again in $hours hour${hours > 1 ? 's' : ''} and $minutes minute${minutes > 1 ? 's' : ''}';
+    } else {
+      return 'You can contact this volunteer again in $minutes minute${minutes > 1 ? 's' : ''}';
     }
   }
 
@@ -376,7 +412,7 @@ class _ContributorDetailScreenState extends State<ContributorDetailScreen> {
           ScaffoldMessenger.of(context).clearSnackBars();
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
-                content: Text('Email sent to the contributor successfully')),
+                content: Text('Email sent to the volunteer successfully')),
           );
         }
       } else {
@@ -407,25 +443,55 @@ class _ContributorDetailScreenState extends State<ContributorDetailScreen> {
   }
 
   Widget _buildFlightRoute(Map<String, dynamic> contributorData) {
-    String departureCode = contributorData['departureAirport']?['iata'] ?? '';
-    String arrivalCode = contributorData['arrivalAirport']?['iata'] ?? '';
-    String? layoverCode = contributorData['layoverAirport']?['iata'];
-    String airline1 = _getAirlineName(contributorData['flightNumberFirstLeg']);
-    String? airline2 = contributorData['flightNumberSecondLeg'] != null
-        ? _getAirlineName(contributorData['flightNumberSecondLeg'])
-        : null;
-    String flightOneDate =
-        _formatDate(contributorData['flightDateTimeFirstLeg'] as Timestamp);
-    String flightOneTime =
-        _formatTime(contributorData['flightDateTimeFirstLeg'] as Timestamp);
+    int numberOfLayovers = contributorData['numberOfLayovers'] ?? 0;
+    List<Widget> flightLegs = [];
 
-    String? flightTwoDate;
-    String? flightTwoTime;
-    if (contributorData['flightDateTimeSecondLeg'] != null) {
-      flightTwoDate =
-          _formatDate(contributorData['flightDateTimeSecondLeg'] as Timestamp);
-      flightTwoTime =
-          _formatTime(contributorData['flightDateTimeSecondLeg'] as Timestamp);
+    flightLegs.add(_buildFlightLeg(
+      contributorData['departureAirport']['iata'],
+      numberOfLayovers > 0
+          ? contributorData['firstLayoverAirport']['iata']
+          : contributorData['arrivalAirport']['iata'],
+      _getAirlineName(contributorData['flightNumberFirstLeg']),
+      contributorData['flightNumberFirstLeg'],
+      _formatDate(contributorData['flightDateTimeFirstLeg'] as Timestamp),
+      _formatTime(contributorData['flightDateTimeFirstLeg'] as Timestamp),
+      isFirstLeg: true,
+      fromFull: contributorData['departureAirport']['name'],
+      toFull: numberOfLayovers > 0
+          ? contributorData['firstLayoverAirport']['name']
+          : contributorData['arrivalAirport']['name'],
+    ));
+
+    if (numberOfLayovers > 0) {
+      flightLegs.add(_buildFlightLeg(
+        contributorData['firstLayoverAirport']['iata'],
+        numberOfLayovers > 1
+            ? contributorData['secondLayoverAirport']['iata']
+            : contributorData['arrivalAirport']['iata'],
+        _getAirlineName(contributorData['flightNumberSecondLeg']),
+        contributorData['flightNumberSecondLeg'],
+        _formatDate(contributorData['flightDateTimeSecondLeg'] as Timestamp),
+        _formatTime(contributorData['flightDateTimeSecondLeg'] as Timestamp),
+        isFirstLeg: false,
+        fromFull: contributorData['firstLayoverAirport']['name'],
+        toFull: numberOfLayovers > 1
+            ? contributorData['secondLayoverAirport']['name']
+            : contributorData['arrivalAirport']['name'],
+      ));
+    }
+
+    if (numberOfLayovers > 1) {
+      flightLegs.add(_buildFlightLeg(
+        contributorData['secondLayoverAirport']['iata'],
+        contributorData['arrivalAirport']['iata'],
+        _getAirlineName(contributorData['flightNumberThirdLeg']),
+        contributorData['flightNumberThirdLeg'],
+        _formatDate(contributorData['flightDateTimeThirdLeg'] as Timestamp),
+        _formatTime(contributorData['flightDateTimeThirdLeg'] as Timestamp),
+        isFirstLeg: false,
+        fromFull: contributorData['secondLayoverAirport']['name'],
+        toFull: contributorData['arrivalAirport']['name'],
+      ));
     }
 
     return Column(
@@ -434,44 +500,7 @@ class _ContributorDetailScreenState extends State<ContributorDetailScreen> {
           'Flight Route and Details',
           style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
         ),
-        if (layoverCode != null &&
-            flightTwoDate != null &&
-            flightTwoTime != null) ...[
-          _buildFlightLeg(
-            departureCode,
-            layoverCode,
-            airline1,
-            contributorData['flightNumberFirstLeg'],
-            flightOneDate,
-            flightOneTime,
-            isFirstLeg: true,
-            fromFull: contributorData['departureAirport']['name'],
-            toFull: contributorData['layoverAirport']['name'],
-          ),
-          const SizedBox(height: 10),
-          _buildFlightLeg(
-            layoverCode,
-            arrivalCode,
-            airline2 ?? airline1,
-            contributorData['flightNumberSecondLeg'] ?? '',
-            flightTwoDate,
-            flightTwoTime,
-            isFirstLeg: false,
-            fromFull: contributorData['layoverAirport']['name'],
-            toFull: contributorData['arrivalAirport']['name'],
-          ),
-        ] else
-          _buildFlightLeg(
-            departureCode,
-            arrivalCode,
-            airline1,
-            contributorData['flightNumberFirstLeg'],
-            flightOneDate,
-            flightOneTime,
-            isFirstLeg: true,
-            fromFull: contributorData['departureAirport']['name'],
-            toFull: contributorData['arrivalAirport']['name'],
-          ),
+        ...flightLegs,
       ],
     );
   }
