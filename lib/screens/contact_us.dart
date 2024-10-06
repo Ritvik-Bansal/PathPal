@@ -126,7 +126,14 @@ class ContactUsScreen extends StatelessWidget {
   }
 
   Future<void> _launchSMS() async {
-    final Uri smsLaunchUri = Uri(scheme: 'sms', path: '4259849360');
+    final Uri smsLaunchUri = Uri(
+      scheme: 'sms',
+      path: '4259849360',
+      queryParameters: <String, String>{
+        'body': Uri.encodeComponent(''),
+      },
+    );
+
     if (await canLaunchUrl(smsLaunchUri)) {
       await launchUrl(smsLaunchUri);
     } else {
@@ -135,7 +142,15 @@ class ContactUsScreen extends StatelessWidget {
   }
 
   Future<void> _launchEmail() async {
-    final Uri emailLaunchUri = Uri(scheme: 'mailto', path: 'info@pathpal.org');
+    final Uri emailLaunchUri = Uri(
+      scheme: 'mailto',
+      path: 'info@pathpal.org',
+      queryParameters: {
+        'subject': 'Contact from PathPal app',
+        'body': '',
+      },
+    );
+
     if (await canLaunchUrl(emailLaunchUri)) {
       await launchUrl(emailLaunchUri);
     } else {

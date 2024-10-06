@@ -8,7 +8,6 @@ class ContributorFormState {
   String flightNumberFirstLeg = '';
   String flightNumberSecondLeg = '';
   String flightNumberThirdLeg = '';
-  String _flightNumber = '';
   int partySize = 1;
   Airport? departureAirport;
   Airport? arrivalAirport;
@@ -20,23 +19,15 @@ class ContributorFormState {
   DateTime? flightDateTimeSecondLeg;
   DateTime? flightDateTimeThirdLeg;
   String userid = '';
+  bool allowInAppMessages = true;
 
-  String get flightNumber =>
-      numberOfLayovers > 0 ? flightNumberFirstLeg : _flightNumber;
+  String get flightNumber => flightNumberFirstLeg;
   set flightNumber(String value) {
-    if (numberOfLayovers > 0) {
-      flightNumberFirstLeg = value;
-    } else {
-      _flightNumber = value;
-    }
+    flightNumberFirstLeg = value;
   }
 
   void updateFlightNumber(String number) {
-    if (numberOfLayovers > 0) {
-      flightNumberFirstLeg = number.toUpperCase();
-    } else {
-      _flightNumber = number.toUpperCase();
-    }
+    flightNumberFirstLeg = number.toUpperCase();
   }
 
   void updateFlightNumberFirstLeg(String number) {
@@ -53,6 +44,10 @@ class ContributorFormState {
 
   void updatePartySize(int size) {
     partySize = size;
+  }
+
+  void updateAllowInAppMessages(bool value) {
+    allowInAppMessages = value;
   }
 
   void updateDepartureAirport(Airport airport) {
@@ -171,7 +166,8 @@ class ContributorFormState {
           : null
       ..flightDateTimeThirdLeg = numberOfLayovers > 1
           ? (map['flightDateTimeThirdLeg'] as Timestamp?)?.toDate()
-          : null;
+          : null
+      ..allowInAppMessages = map['allowInAppMessages'] ?? true;
 
     return state;
   }
@@ -181,6 +177,7 @@ class ContributorFormState {
       'flightNumberFirstLeg':
           numberOfLayovers > 0 ? flightNumberFirstLeg : flightNumber,
       'partySize': partySize,
+      'allowInAppMessages': allowInAppMessages,
       'departureAirport': departureAirport?.toJson(),
       'arrivalAirport': arrivalAirport?.toJson(),
       'numberOfLayovers': numberOfLayovers,
@@ -212,10 +209,9 @@ class ContributorFormState {
   void updateFromMap(Map<String, dynamic> map) {
     numberOfLayovers = map['numberOfLayovers'] ?? 0;
     if (numberOfLayovers > 0) {
-      flightNumberFirstLeg = map['flightNumberFirstLeg'] ?? '';
       flightNumberSecondLeg = map['flightNumberSecondLeg'] ?? '';
     } else {
-      _flightNumber = map['flightNumberFirstLeg'] ?? '';
+      flightNumberFirstLeg = map['flightNumberFirstLeg'] ?? '';
     }
 
     if (numberOfLayovers > 1) {
@@ -232,6 +228,7 @@ class ContributorFormState {
     firstLayoverAirport = map['firstLayoverAirport'] != null
         ? Airport.fromMap(map['firstLayoverAirport'])
         : null;
+    allowInAppMessages = map['allowInAppMessages'] ?? true;
     secondLayoverAirport = map['secondLayoverAirport'] != null
         ? Airport.fromMap(map['secondLayoverAirport'])
         : null;

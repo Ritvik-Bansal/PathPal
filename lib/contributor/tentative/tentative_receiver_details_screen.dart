@@ -7,9 +7,6 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 
-final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-final FirebaseAuth _auth = FirebaseAuth.instance;
-
 class TentativeReceiverDetailScreen extends StatefulWidget {
   final Map<String, dynamic> receiverData;
   final FirestoreService firestoreService;
@@ -28,6 +25,12 @@ class TentativeReceiverDetailScreen extends StatefulWidget {
 class _TentativeReceiverDetailScreenState
     extends State<TentativeReceiverDetailScreen> {
   bool _hasContacted = false;
+  bool _isLoading = false;
+
+  @override
+  void dispose() {
+    super.dispose();
+  }
 
   @override
   void initState() {
@@ -50,38 +53,44 @@ class _TentativeReceiverDetailScreenState
       appBar: AppBar(
         title: Text('Seeker Details'),
       ),
-      body: SingleChildScrollView(
-        padding: EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            if (_hasContacted)
-              Padding(
-                padding: EdgeInsets.all(8.0),
-                child: Text(
-                  'You have already contacted this receiver',
-                  style: TextStyle(
-                    color: Colors.green,
-                    fontWeight: FontWeight.bold,
+      body: _isLoading
+          ? Center(
+              child: CircularProgressIndicator(
+              backgroundColor: Theme.of(context).colorScheme.surface,
+            ))
+          : SingleChildScrollView(
+              padding: EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  if (_hasContacted)
+                    Padding(
+                      padding: EdgeInsets.all(8.0),
+                      child: Text(
+                        'You have already contacted this receiver',
+                        style: TextStyle(
+                          color: Colors.green,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  _buildTravelRoute(),
+                  const SizedBox(height: 20),
+                  Center(
+                    child: ElevatedButton(
+                      onPressed: () => _showContactConfirmationDialog(context),
+                      child: Text(_hasContacted
+                          ? 'Contact This Receiver Again'
+                          : 'Contact This Receiver'),
+                      style: ElevatedButton.styleFrom(
+                        padding:
+                            EdgeInsets.symmetric(horizontal: 50, vertical: 15),
+                      ),
+                    ),
                   ),
-                ),
-              ),
-            _buildTravelRoute(),
-            const SizedBox(height: 20),
-            Center(
-              child: ElevatedButton(
-                onPressed: () => _showContactConfirmationDialog(context),
-                child: Text(_hasContacted
-                    ? 'Contact This Receiver Again'
-                    : 'Contact This Receiver'),
-                style: ElevatedButton.styleFrom(
-                  padding: EdgeInsets.symmetric(horizontal: 50, vertical: 15),
-                ),
+                ],
               ),
             ),
-          ],
-        ),
-      ),
     );
   }
 
@@ -181,12 +190,20 @@ class _TentativeReceiverDetailScreenState
   }
 
   Future<void> _sendEmailToReceiver(BuildContext context) async {
+    if (!mounted) return;
+
+    setState(() {
+      _isLoading = true;
+    });
+
     try {
+      print('Starting _sendEmailToReceiver');
       final currentUserData =
           await widget.firestoreService.getCurrentUserData();
       if (currentUserData == null) {
         throw Exception('Current user data not found');
       }
+      print('Current user data retrieved');
 
       final emailContent = '''
 <!DOCTYPE html>
@@ -241,11 +258,12 @@ class _TentativeReceiverDetailScreenState
 </html>
 ''';
 
+      print('Sending email');
       final response = await http.post(
         Uri.parse('https://api.mailjet.com/v3.1/send'),
         headers: {
           'Authorization':
-              'Basic ${base64Encode(utf8.encode('${dotenv.env["MAILAPI"]}'))}',
+              'Basic ${base64Encode(utf8.encode('${dotenv.env["MAILAPI"] ?? ""}'))}',
           'Content-Type': 'application/json',
         },
         body: json.encode({
@@ -254,8 +272,8 @@ class _TentativeReceiverDetailScreenState
               'From': {'Email': 'noreply@pathpal.org', 'Name': 'PathPal'},
               'To': [
                 {
-                  'Email': widget.receiverData['userEmail'],
-                  'Name': widget.receiverData['userName']
+                  'Email': widget.receiverData['userEmail'] ?? '',
+                  'Name': widget.receiverData['userName'] ?? ''
                 }
               ],
               'Subject': 'PathPal: A Seeker Wants to Connect',
@@ -266,52 +284,82 @@ class _TentativeReceiverDetailScreenState
         }),
       );
 
+      print('Email API response status: ${response.statusCode}');
+      print('Email API response body: ${response.body}');
+
       if (response.statusCode == 200) {
+        print('Email sent successfully, adding to contacted list');
         await widget.firestoreService
-            .addContactedTentativeReceiver(widget.receiverData['userId']);
+            .addContactedTentativeReceiver(widget.receiverData['userId'] ?? '');
+        print('Added to contacted list');
 
-        final user = _auth.currentUser;
+        final user = FirebaseAuth.instance.currentUser;
         if (user == null) throw Exception('No authenticated user found');
+        print("Authenticated user found: ${user.uid}");
 
-        QuerySnapshot receiverQuery = await _firestore
+        print("Querying receivers collection");
+        QuerySnapshot receiverQuery = await FirebaseFirestore.instance
             .collection('receivers')
             .where('userId', isEqualTo: user.uid)
             .limit(1)
             .get();
+        print("Receiver query completed");
 
         String? receiverDocId;
         if (receiverQuery.docs.isNotEmpty) {
           receiverDocId = receiverQuery.docs.first.id;
+          print("Receiver document ID: $receiverDocId");
+        } else {
+          print("No receiver document found");
         }
 
         String startLocation =
-            widget.receiverData['startAirport']['iata'] ?? 'Unknown';
+            widget.receiverData['startAirport']?['iata'] ?? 'Unknown';
         String endLocation =
-            widget.receiverData['endAirport']['iata'] ?? 'Unknown';
+            widget.receiverData['endAirport']?['iata'] ?? 'Unknown';
         String notificationBody =
             'A Seeker has expressed interest in your seeker request from $startLocation to $endLocation.';
+        print("Notification body prepared");
 
+        print("Adding notification");
         await widget.firestoreService.addNotification(
-          widget.receiverData['userId'],
+          widget.receiverData['userId'] ?? '',
           'A Fellow Seeker Contacted You',
           notificationBody,
           receiverDocId: receiverDocId,
         );
+        print('Notification added');
 
-        setState(() {
-          _hasContacted = true;
-        });
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Email sent to the Seeker successfully')),
-        );
+        if (mounted) {
+          setState(() {
+            _hasContacted = true;
+            _isLoading = false;
+          });
+          _showMessage(context, 'Email sent to the Seeker successfully');
+        }
       } else {
         throw Exception('Failed to send email: ${response.body}');
       }
-    } catch (e) {
-      print('Error sending email: $e');
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error sending email to the Seeker')),
-      );
+    } catch (e, stackTrace) {
+      print('Error in _sendEmailToReceiver: $e');
+      print('Stack trace: $stackTrace');
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+        _showMessage(context, 'An error occurred: ${e.toString()}');
+      }
+    }
+    print('_sendEmailToReceiver completed');
+  }
+
+  void _showMessage(BuildContext context, String message) {
+    if (mounted) {
+      Future.microtask(() {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(message)),
+        );
+      });
     }
   }
 }

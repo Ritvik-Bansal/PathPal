@@ -73,6 +73,7 @@ class _ContributorFormScreenState extends State<ContributorFormScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              SizedBox(height: 20),
               Row(
                 children: [
                   Expanded(child: _buildFlightTypeSelection()),
@@ -84,12 +85,33 @@ class _ContributorFormScreenState extends State<ContributorFormScreen> {
               _buildAirportSelection(),
               const SizedBox(height: 24),
               _buildFlightDetailsSection(),
-              const SizedBox(height: 32),
+              const SizedBox(height: 10),
+              _buildAllowInAppMessagesCheckbox(),
+              const SizedBox(height: 10),
               _buildSubmitButton(),
             ],
           ),
         ),
       ),
+    );
+  }
+
+  Widget _buildAllowInAppMessagesCheckbox() {
+    return CheckboxListTile(
+      title: const Text(
+        'Allow seekers to send in-app messages',
+        style: TextStyle(fontSize: 13),
+      ),
+      value: _formState.allowInAppMessages,
+      onChanged: (bool? value) {
+        setState(() {
+          _formState.updateAllowInAppMessages(value ?? true);
+        });
+      },
+      controlAffinity: ListTileControlAffinity.leading,
+      fillColor:
+          WidgetStatePropertyAll(const Color.fromARGB(255, 180, 221, 255)),
+      checkColor: Theme.of(context).colorScheme.onSurface,
     );
   }
 
@@ -194,6 +216,7 @@ class _ContributorFormScreenState extends State<ContributorFormScreen> {
                 onTap: () {
                   onSelect(airport);
                   controller.closeView('${airport.name} (${airport.iata})');
+                  setState(() {});
                 },
               ));
         },
@@ -202,57 +225,71 @@ class _ContributorFormScreenState extends State<ContributorFormScreen> {
   }
 
   Widget _buildFlightTypeSelection() {
-    return DropdownButtonFormField<int>(
-      value: _formState.numberOfLayovers,
-      dropdownColor: Theme.of(context).colorScheme.surface,
-      decoration: InputDecoration(
-        labelText: 'Flight Type',
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(10.0),
+    return Container(
+      decoration: BoxDecoration(
+        border: Border.all(color: const Color.fromARGB(255, 63, 63, 63)),
+        borderRadius: BorderRadius.circular(10.0),
+      ),
+      child: DropdownButtonHideUnderline(
+        child: ButtonTheme(
+          alignedDropdown: true,
+          child: DropdownButton<int>(
+            value: _formState.numberOfLayovers,
+            isExpanded: true,
+            icon: const Icon(Icons.arrow_drop_down),
+            iconSize: 24,
+            elevation: 16,
+            style:
+                TextStyle(color: Theme.of(context).textTheme.bodyLarge?.color),
+            dropdownColor: Theme.of(context).colorScheme.surface,
+            borderRadius: BorderRadius.all(Radius.circular(20)),
+            items: const [
+              DropdownMenuItem(value: 0, child: Text('Direct')),
+              DropdownMenuItem(value: 1, child: Text('1 Layover')),
+              DropdownMenuItem(value: 2, child: Text('2 Layovers')),
+            ],
+            onChanged: (value) {
+              setState(() {
+                _formState.numberOfLayovers = value ?? 0;
+                if (value == 0) {
+                  _formState.removeLayovers();
+                }
+              });
+            },
+          ),
         ),
       ),
-      items: const [
-        DropdownMenuItem(value: 0, child: Text('Direct')),
-        DropdownMenuItem(value: 1, child: Text('1 Layover')),
-        DropdownMenuItem(value: 2, child: Text('2 Layovers')),
-      ],
-      onChanged: (value) {
-        setState(() {
-          _formState.numberOfLayovers = value ?? 0;
-          if (value == 0) {
-            _formState.removeLayovers();
-          }
-        });
-      },
     );
   }
 
   Widget _buildPartySizeSelection() {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
       decoration: BoxDecoration(
-        border: Border.all(color: Colors.grey),
-        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: const Color.fromARGB(255, 63, 63, 63)),
+        borderRadius: BorderRadius.circular(10.0),
       ),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
           const Icon(Icons.person, size: 20),
-          const SizedBox(width: 4),
-          DropdownButton<int>(
-            value: _formState.partySize,
-            dropdownColor: Theme.of(context).colorScheme.surface,
-            items: List.generate(5, (index) => index + 1)
-                .map((i) => DropdownMenuItem(value: i, child: Text('$i')))
-                .toList(),
-            onChanged: (value) {
-              setState(() {
-                _formState.updatePartySize(value ?? 1);
-              });
-            },
-            underline: Container(),
-            icon: const Icon(Icons.arrow_drop_down),
-            isDense: true,
+          const SizedBox(width: 8),
+          DropdownButtonHideUnderline(
+            child: DropdownButton<int>(
+              value: _formState.partySize,
+              dropdownColor: Theme.of(context).colorScheme.surface,
+              borderRadius: BorderRadius.all(Radius.circular(20)),
+              items: List.generate(5, (index) => index + 1)
+                  .map((i) => DropdownMenuItem(value: i, child: Text('$i')))
+                  .toList(),
+              onChanged: (value) {
+                setState(() {
+                  _formState.updatePartySize(value ?? 1);
+                });
+              },
+              icon: const Icon(Icons.arrow_drop_down),
+              isDense: true,
+            ),
           ),
         ],
       ),
@@ -367,12 +404,12 @@ class _ContributorFormScreenState extends State<ContributorFormScreen> {
   ) {
     return TextFormField(
       decoration: InputDecoration(
-        labelText: 'Departure Date/Time',
-        hintText: 'Date/Time',
+        labelText: 'Date & Time',
+        hintText: 'Date & Time',
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(10.0),
         ),
-        suffixIcon: Icon(Icons.calendar_today),
+        prefixIcon: Icon(Icons.calendar_today),
       ),
       readOnly: true,
       controller: TextEditingController(
@@ -499,44 +536,44 @@ class _ContributorFormScreenState extends State<ContributorFormScreen> {
 
       String generateFlightTable() {
         String tableContent = '''
-        <table style="width:100%; border-collapse: collapse; margin-top: 10px; margin-bottom: 10px;">
-          <tr style="background-color: #f1f4f8;">
-            <th style="padding: 10px; border: 1px solid #ddd; text-align: left;">Departure</th>
-            <th style="padding: 10px; border: 1px solid #ddd; text-align: left;">Arrival</th>
-            <th style="padding: 10px; border: 1px solid #ddd; text-align: left;">Flight Number</th>
-            <th style="padding: 10px; border: 1px solid #ddd; text-align: left;">Date-Time</th>
-          </tr>
-      ''';
+  <table style="width:100%; border-collapse: collapse; margin-top: 10px; margin-bottom: 10px;">
+    <tr style="background-color: #f1f4f8;">
+      <th style="padding: 10px; border: 1px solid #ddd; text-align: left;">Departure</th>
+      <th style="padding: 10px; border: 1px solid #ddd; text-align: left;">Arrival</th>
+      <th style="padding: 10px; border: 1px solid #ddd; text-align: left;">Flight Number</th>
+      <th style="padding: 10px; border: 1px solid #ddd; text-align: left;">Date-Time</th>
+    </tr>
+  ''';
 
         tableContent += '''
-        <tr>
-          <td style="padding: 10px; border: 1px solid #ddd;">${_formState.departureAirport?.city}, ${_formState.departureAirport?.country}</td>
-          <td style="padding: 10px; border: 1px solid #ddd;">${_formState.numberOfLayovers > 0 ? _formState.firstLayoverAirport?.city : _formState.arrivalAirport?.city}, ${_formState.numberOfLayovers > 0 ? _formState.firstLayoverAirport?.country : _formState.arrivalAirport?.country}</td>
-          <td style="padding: 10px; border: 1px solid #ddd;">${_formState.flightNumberFirstLeg}</td>
-          <td style="padding: 10px; border: 1px solid #ddd;">${formatDateTime(_formState.flightDateTimeFirstLeg)}</td>
-        </tr>
-      ''';
+  <tr>
+    <td style="padding: 10px; border: 1px solid #ddd;">${_formState.departureAirport?.city}, ${_formState.departureAirport?.country}</td>
+    <td style="padding: 10px; border: 1px solid #ddd;">${_formState.numberOfLayovers > 0 ? _formState.firstLayoverAirport?.city : _formState.arrivalAirport?.city}, ${_formState.numberOfLayovers > 0 ? _formState.firstLayoverAirport?.country : _formState.arrivalAirport?.country}</td>
+    <td style="padding: 10px; border: 1px solid #ddd;">${_formState.flightNumberFirstLeg}</td>
+    <td style="padding: 10px; border: 1px solid #ddd;">${formatDateTime(_formState.flightDateTimeFirstLeg)}</td>
+  </tr>
+  ''';
 
         if (_formState.numberOfLayovers > 0) {
           tableContent += '''
-          <tr>
-            <td style="padding: 10px; border: 1px solid #ddd;">${_formState.firstLayoverAirport?.city}, ${_formState.firstLayoverAirport?.country}</td>
-            <td style="padding: 10px; border: 1px solid #ddd;">${_formState.numberOfLayovers > 1 ? _formState.secondLayoverAirport?.city : _formState.arrivalAirport?.city}, ${_formState.numberOfLayovers > 1 ? _formState.secondLayoverAirport?.country : _formState.arrivalAirport?.country}</td>
-            <td style="padding: 10px; border: 1px solid #ddd;">${_formState.flightNumberSecondLeg}</td>
-            <td style="padding: 10px; border: 1px solid #ddd;">${formatDateTime(_formState.flightDateTimeSecondLeg)}</td>
-          </tr>
-        ''';
+    <tr>
+      <td style="padding: 10px; border: 1px solid #ddd;">${_formState.firstLayoverAirport?.city}, ${_formState.firstLayoverAirport?.country}</td>
+      <td style="padding: 10px; border: 1px solid #ddd;">${_formState.numberOfLayovers > 1 ? _formState.secondLayoverAirport?.city : _formState.arrivalAirport?.city}, ${_formState.numberOfLayovers > 1 ? _formState.secondLayoverAirport?.country : _formState.arrivalAirport?.country}</td>
+      <td style="padding: 10px; border: 1px solid #ddd;">${_formState.flightNumberSecondLeg}</td>
+      <td style="padding: 10px; border: 1px solid #ddd;">${formatDateTime(_formState.flightDateTimeSecondLeg)}</td>
+    </tr>
+    ''';
         }
 
         if (_formState.numberOfLayovers > 1) {
           tableContent += '''
-          <tr>
-            <td style="padding: 10px; border: 1px solid #ddd;">${_formState.secondLayoverAirport?.city}, ${_formState.secondLayoverAirport?.country}</td>
-            <td style="padding: 10px; border: 1px solid #ddd;">${_formState.arrivalAirport?.city}, ${_formState.arrivalAirport?.country}</td>
-            <td style="padding: 10px; border: 1px solid #ddd;">${_formState.flightNumberThirdLeg}</td>
-            <td style="padding: 10px; border: 1px solid #ddd;">${formatDateTime(_formState.flightDateTimeThirdLeg)}</td>
-          </tr>
-        ''';
+    <tr>
+      <td style="padding: 10px; border: 1px solid #ddd;">${_formState.secondLayoverAirport?.city}, ${_formState.secondLayoverAirport?.country}</td>
+      <td style="padding: 10px; border: 1px solid #ddd;">${_formState.arrivalAirport?.city}, ${_formState.arrivalAirport?.country}</td>
+      <td style="padding: 10px; border: 1px solid #ddd;">${_formState.flightNumberThirdLeg}</td>
+      <td style="padding: 10px; border: 1px solid #ddd;">${formatDateTime(_formState.flightDateTimeThirdLeg)}</td>
+    </tr>
+    ''';
         }
 
         tableContent += '</table>';

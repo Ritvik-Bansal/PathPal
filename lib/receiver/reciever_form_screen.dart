@@ -222,6 +222,7 @@ class _RecieverFormScreenState extends State<RecieverFormScreen> {
                 onTap: () {
                   onSelect(airport);
                   controller.closeView('${airport.name} (${airport.iata})');
+                  setState(() {});
                 },
               ));
         },
@@ -256,7 +257,6 @@ class _RecieverFormScreenState extends State<RecieverFormScreen> {
         _formState.updateDateRange(formattedRange);
       });
 
-      // Update the display format separately
       final DateFormat displayFormatter = DateFormat('MMM d');
       final String displayRange =
           '${displayFormatter.format(picked.start)} - ${displayFormatter.format(picked.end)}';
@@ -275,6 +275,7 @@ class _RecieverFormScreenState extends State<RecieverFormScreen> {
           border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(10.0),
           ),
+          prefixIcon: Icon(Icons.calendar_today),
         ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -282,7 +283,7 @@ class _RecieverFormScreenState extends State<RecieverFormScreen> {
             Text(_formState.displayDateRange.isEmpty
                 ? 'Select dates'
                 : _formState.displayDateRange),
-            const Icon(Icons.calendar_today),
+            const SizedBox(width: 24),
           ],
         ),
       ),
@@ -290,56 +291,100 @@ class _RecieverFormScreenState extends State<RecieverFormScreen> {
   }
 
   Widget _buildReasonSelection() {
-    return DropdownButtonFormField<String>(
-      value: _formState.reason,
-      decoration: InputDecoration(
-        labelText: 'Reason for assistance',
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(10.0),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          decoration: BoxDecoration(
+            border: Border.all(color: Colors.grey),
+            borderRadius: BorderRadius.circular(10.0),
+          ),
+          child: DropdownButtonHideUnderline(
+            child: ButtonTheme(
+              alignedDropdown: true,
+              child: DropdownButton<String>(
+                value: _formState.reason,
+                isExpanded: true,
+                icon: const Icon(Icons.arrow_drop_down),
+                iconSize: 24,
+                elevation: 16,
+                style: TextStyle(
+                    color: Theme.of(context).textTheme.bodyLarge?.color),
+                dropdownColor: Theme.of(context).colorScheme.surface,
+                borderRadius: BorderRadius.all(Radius.circular(20)),
+                items: const [
+                  DropdownMenuItem(
+                      value: 'I am elderly', child: Text('I am elderly')),
+                  DropdownMenuItem(
+                      value: 'I am a single parent flying with kids',
+                      child: Text('Single parent with kids')),
+                  DropdownMenuItem(
+                      value: 'I need company', child: Text('Need company')),
+                  DropdownMenuItem(value: 'Other', child: Text('Other')),
+                ],
+                onChanged: (value) {
+                  setState(() {
+                    _formState.updateReason(value ?? '');
+                  });
+                },
+              ),
+            ),
+          ),
         ),
-      ),
-      items: const [
-        DropdownMenuItem(value: 'I am elderly', child: Text('I am elderly')),
-        DropdownMenuItem(
-            value: 'I am a single parent flying with kids',
-            child: Text('Single parent with kids')),
-        DropdownMenuItem(value: 'I need company', child: Text('Need company')),
-        DropdownMenuItem(value: 'Other', child: Text('Other')),
+        if (_formState.reason == 'Other')
+          Padding(
+            padding: const EdgeInsets.only(top: 8.0),
+            child: TextFormField(
+              decoration: InputDecoration(
+                labelText: 'Please specify',
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(10.0),
+                ),
+              ),
+              onChanged: (value) {
+                _formState.updateOtherReason(value);
+              },
+              validator: (value) {
+                if (_formState.reason == 'Other' &&
+                    (value == null || value.isEmpty)) {
+                  return 'Please specify your reason';
+                }
+                return null;
+              },
+            ),
+          ),
       ],
-      onChanged: (value) {
-        setState(() {
-          _formState.updateReason(value ?? '');
-        });
-      },
     );
   }
 
   Widget _buildPartySizeSelection() {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
       decoration: BoxDecoration(
         border: Border.all(color: Colors.grey),
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(10.0),
       ),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
           const Icon(Icons.person, size: 20),
-          const SizedBox(width: 4),
-          DropdownButton<int>(
-            value: _formState.partySize,
-            dropdownColor: Theme.of(context).colorScheme.surface,
-            items: List.generate(10, (index) => index + 1)
-                .map((i) => DropdownMenuItem(value: i, child: Text('$i')))
-                .toList(),
-            onChanged: (value) {
-              setState(() {
-                _formState.updatePartySize(value ?? 1);
-              });
-            },
-            underline: Container(),
-            icon: const Icon(Icons.arrow_drop_down),
-            isDense: true,
+          const SizedBox(width: 8),
+          DropdownButtonHideUnderline(
+            child: DropdownButton<int>(
+              value: _formState.partySize,
+              dropdownColor: Theme.of(context).colorScheme.surface,
+              items: List.generate(5, (index) => index + 1)
+                  .map((i) => DropdownMenuItem(value: i, child: Text('$i')))
+                  .toList(),
+              onChanged: (value) {
+                setState(() {
+                  _formState.updatePartySize(value ?? 1);
+                });
+              },
+              borderRadius: BorderRadius.all(Radius.circular(20)),
+              icon: const Icon(Icons.arrow_drop_down),
+              isDense: true,
+            ),
           ),
         ],
       ),
@@ -448,7 +493,8 @@ class _RecieverFormScreenState extends State<RecieverFormScreen> {
     if (_formState.startAirport == null ||
         _formState.endAirport == null ||
         _formState.selectedDateRange.isEmpty ||
-        _formState.phoneNumber.isEmpty) {
+        _formState.phoneNumber.isEmpty ||
+        (_formState.reason == 'Other' && _formState.otherReason.isEmpty)) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Please fill in all required fields')),
       );

@@ -58,7 +58,7 @@ class FirestoreService {
         'startAirport': formState.startAirport?.toJson(),
         'endAirport': formState.endAirport?.toJson(),
         'reason': formState.reason,
-        'otherReason': formState.otherReason,
+        'otherReason': formState.reason == 'Other' ? formState.otherReason : '',
         'partySize': formState.partySize,
         'updatedAt': FieldValue.serverTimestamp(),
       };
@@ -135,6 +135,7 @@ class FirestoreService {
         'departureAirport': formState.departureAirport?.toJson(),
         'arrivalAirport': formState.arrivalAirport?.toJson(),
         'numberOfLayovers': formState.numberOfLayovers,
+        'allowInAppMessages': formState.allowInAppMessages,
         'flightDateTimeFirstLeg':
             Timestamp.fromDate(formState.flightDateTimeFirstLeg!),
         'flightNumberFirstLeg': formState.flightNumber.toUpperCase(),
@@ -227,30 +228,37 @@ class FirestoreService {
   }
 
   Future<void> addContactedTentativeReceiver(String receiverId) async {
+    print('Entered addContactedTentativeReceiver method');
     try {
       final user = _auth.currentUser;
       if (user == null) throw Exception('No authenticated user found');
+      print('User authenticated: ${user.uid}');
 
-      final userDoc = await _firestore.collection('users').doc(user.uid).get();
-      final userData = userDoc.data() ?? {};
+      final userDocRef = _firestore.collection('users').doc(user.uid);
 
-      if (userData['contactedTentativeReceivers'] is Map) {
-        await _firestore.collection('users').doc(user.uid).update({
-          'contactedTentativeReceivers.$receiverId':
-              FieldValue.serverTimestamp(),
-        });
-      } else {
-        await _firestore.collection('users').doc(user.uid).update({
-          'contactedTentativeReceivers': FieldValue.arrayUnion([
-            {
-              'receiverId': receiverId,
-              'timestamp': FieldValue.serverTimestamp(),
-            }
-          ])
-        });
-      }
+      return await _firestore.runTransaction((transaction) async {
+        final userDoc = await transaction.get(userDocRef);
+        print('User document retrieved');
+
+        if (!userDoc.exists) {
+          print('User document does not exist');
+          throw Exception('User document not found');
+        }
+
+        List<dynamic> contactedTentativeReceivers = List<dynamic>.from(
+            userDoc.data()?['contactedTentativeReceivers'] ?? []);
+
+        if (!contactedTentativeReceivers.contains(receiverId)) {
+          contactedTentativeReceivers.add(receiverId);
+          print('Adding new receiverId to the list');
+          transaction.update(userDocRef,
+              {'contactedTentativeReceivers': contactedTentativeReceivers});
+        } else {
+          print('ReceiverId already in the list');
+        }
+      });
     } catch (e, stackTrace) {
-      print('Error adding contacted Seeker: $e');
+      print('Error in addContactedTentativeReceiver: $e');
       print('Stack trace: $stackTrace');
       rethrow;
     }
@@ -343,30 +351,14 @@ class FirestoreService {
       WriteBatch batch = _firestore.batch();
 
       for (QueryDocumentSnapshot userDoc in usersWithFavorite.docs) {
-        Map<String, dynamic>? userData =
-            userDoc.data() as Map<String, dynamic>?;
-
-        if (userData != null) {
-          List<String> favorites =
-              List<String>.from(userData['favoritedContributors'] ?? []);
-          favorites.remove(contributorId);
-          batch.update(userDoc.reference, {'favoritedContributors': favorites});
-
-          if (userData.containsKey('contactedContributors')) {
-            List<String> contacted =
-                List<String>.from(userData['contactedContributors'] ?? []);
-            if (contacted.contains(contributorId)) {
-              contacted.remove(contributorId);
-              batch.update(
-                  userDoc.reference, {'contactedContributors': contacted});
-            }
-          }
-        }
+        batch.update(userDoc.reference, {
+          'favoritedContributors': FieldValue.arrayRemove([contributorId])
+        });
       }
 
       await batch.commit();
     } catch (e) {
-      print('Error removing volunteer from favorites and contacts: $e');
+      print('Error removing volunteer from favorites: $e');
       rethrow;
     }
   }
@@ -571,7 +563,7 @@ class FirestoreService {
         'startAirport': formState.startAirport?.toJson(),
         'endAirport': formState.endAirport?.toJson(),
         'reason': formState.reason,
-        'otherReason': formState.otherReason,
+        'otherReason': formState.reason == 'Other' ? formState.otherReason : '',
         'partySize': formState.partySize,
         'updatedAt': FieldValue.serverTimestamp(),
       };

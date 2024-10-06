@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 import 'package:pathpal/data/airline_data.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:http/http.dart' as http;
+import 'package:pathpal/screens/chat_screen.dart';
 import 'dart:convert';
 import 'package:pathpal/widgets/map_widget.dart';
 
@@ -204,6 +205,14 @@ class _ContributorDetailScreenState extends State<ContributorDetailScreen> {
           onPressed: () => Navigator.of(context).pop(_isFavorite),
         ),
         actions: [
+          if (!_isOwnSubmission &&
+              contributorData['allowInAppMessages'] == true)
+            IconButton(
+              icon: const Icon(
+                Icons.chat_bubble_outline_rounded,
+              ),
+              onPressed: () => _startChat(context, contributorData),
+            ),
           if (!_isOwnSubmission)
             IconButton(
               icon: Icon(
@@ -258,6 +267,63 @@ class _ContributorDetailScreenState extends State<ContributorDetailScreen> {
             ),
             const SizedBox(height: 30),
           ],
+        ),
+      ),
+    );
+  }
+
+  void _startChat(
+      BuildContext context, Map<String, dynamic> contributorData) async {
+    final currentUser = FirebaseAuth.instance.currentUser;
+    if (currentUser == null) return;
+
+    final contributorUserId = contributorData['userId'] as String?;
+    if (contributorUserId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+            content: Text(
+                'Unable to start chat. Contributor information is incomplete.')),
+      );
+      return;
+    }
+
+    final chatIdParts = [currentUser.uid, contributorUserId];
+    chatIdParts.sort();
+    final chatId = chatIdParts.join('_');
+
+    final chatDoc =
+        await FirebaseFirestore.instance.collection('chats').doc(chatId).get();
+
+    if (!chatDoc.exists) {
+      await FirebaseFirestore.instance.collection('chats').doc(chatId).set({
+        'participants': [currentUser.uid, contributorUserId],
+        'createdAt': FieldValue.serverTimestamp(),
+        'lastMessage': null,
+        'lastMessageTimestamp': FieldValue.serverTimestamp(),
+        'unreadCount_${currentUser.uid}': 0,
+        'unreadCount_${contributorUserId}': 0,
+        'deleted_${currentUser.uid}': false,
+        'deleted_${contributorUserId}': false,
+      });
+    }
+
+    final contributorUserDoc = await FirebaseFirestore.instance
+        .collection('users')
+        .doc(contributorUserId)
+        .get();
+
+    final contributorUserData = contributorUserDoc.data();
+    final contributorName = contributorUserData?['name'] ?? 'Volunteer';
+    final contributorProfilePic = contributorUserData?['profile_picture'];
+
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => ChatScreen(
+          chatId: chatId,
+          otherUserId: contributorUserId,
+          otherUserName: contributorName,
+          otherUserProfilePic: contributorProfilePic,
         ),
       ),
     );

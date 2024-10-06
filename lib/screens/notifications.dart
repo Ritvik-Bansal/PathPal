@@ -28,6 +28,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     super.initState();
     _loadAirlines();
     widget.onOpen();
+    Future.microtask(() => widget.onOpen());
   }
 
   Future<void> _loadAirlines() async {
@@ -61,71 +62,79 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
       appBar: AppBar(
         title: const Text('Notifications'),
       ),
-      body: StreamBuilder(
-        stream: FirebaseFirestore.instance
-            .collection('notifications')
-            .where('userId', isEqualTo: user?.uid)
-            .orderBy('createdAt', descending: true)
-            .snapshots(),
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          }
-
-          if (snapshot.hasError) {
-            return Center(child: Text('Error: ${snapshot.error}'));
-          }
-
-          final docs = snapshot.data?.docs ?? [];
-
-          if (docs.isEmpty) {
-            return const Center(child: Text('No notifications'));
-          }
-
-          return ListView.builder(
-            itemCount: docs.length,
-            itemBuilder: (context, index) {
-              var notification = docs[index];
-              return Dismissible(
-                key: Key(notification.id),
-                background: Container(
-                  color: Colors.red,
-                  alignment: Alignment.centerRight,
-                  padding: EdgeInsets.only(right: 20),
-                  child: Icon(Icons.delete, color: Colors.white),
-                ),
-                direction: DismissDirection.endToStart,
-                onDismissed: (direction) {
-                  _deleteNotification(notification.id);
-                },
-                child: Column(
-                  children: [
-                    ListTile(
-                      leading: _buildNotificationImage(notification),
-                      title: Text(
-                        notification['title'] ?? 'No title',
-                        style: TextStyle(fontWeight: FontWeight.bold),
-                      ),
-                      subtitle: Text(notification['body'] ?? 'No body'),
-                      trailing: Text(
-                        _formatDate(notification['createdAt'] as Timestamp? ??
-                            Timestamp.now()),
-                        style: TextStyle(color: Colors.grey[600]),
-                      ),
-                      onTap: () =>
-                          _handleNotificationTap(context, notification),
-                    ),
-                    Padding(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 10, vertical: 5),
-                      child: Divider(height: 1, thickness: 1),
-                    ),
-                  ],
-                ),
-              );
-            },
-          );
+      body: RefreshIndicator(
+        onRefresh: () async {
+          setState(() {});
         },
+        child: StreamBuilder(
+          stream: FirebaseFirestore.instance
+              .collection('notifications')
+              .where('userId', isEqualTo: user?.uid)
+              .orderBy('createdAt', descending: true)
+              .snapshots(),
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return const Center(child: CircularProgressIndicator());
+            }
+
+            if (snapshot.hasError) {
+              return Center(child: Text('Error: ${snapshot.error}'));
+            }
+
+            final docs = snapshot.data?.docs;
+            if (docs == null) {
+              return const Center(child: Text('No data available'));
+            }
+
+            if (docs.isEmpty) {
+              return const Center(child: Text('No notifications'));
+            }
+
+            return ListView.builder(
+              itemCount: docs.length,
+              itemBuilder: (context, index) {
+                var notification = docs[index];
+                return Dismissible(
+                  key: Key(notification.id),
+                  background: Container(
+                    color: Colors.red,
+                    alignment: Alignment.centerRight,
+                    padding: EdgeInsets.only(right: 20),
+                    child: Icon(Icons.delete, color: Colors.white),
+                  ),
+                  direction: DismissDirection.endToStart,
+                  onDismissed: (direction) {
+                    _deleteNotification(notification.id);
+                  },
+                  child: Column(
+                    children: [
+                      ListTile(
+                        leading: _buildNotificationImage(notification),
+                        title: Text(
+                          notification['title'] ?? 'No title',
+                          style: TextStyle(fontWeight: FontWeight.bold),
+                        ),
+                        subtitle: Text(notification['body'] ?? 'No body'),
+                        trailing: Text(
+                          _formatDate(notification['createdAt'] as Timestamp? ??
+                              Timestamp.now()),
+                          style: TextStyle(color: Colors.grey[600]),
+                        ),
+                        onTap: () =>
+                            _handleNotificationTap(context, notification),
+                      ),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 10, vertical: 5),
+                        child: Divider(height: 1, thickness: 1),
+                      ),
+                    ],
+                  ),
+                );
+              },
+            );
+          },
+        ),
       ),
     );
   }

@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:pathpal/data/airline_data.dart';
 import 'package:pathpal/screens/home.dart';
+import 'package:pathpal/screens/messages_screen.dart';
 import 'package:pathpal/screens/my_stuff_screen.dart';
 import 'package:pathpal/screens/notifications.dart';
 import 'package:pathpal/screens/profile.dart';
@@ -19,12 +20,14 @@ class Tabs extends StatefulWidget {
 class _TabsState extends State<Tabs> {
   StreamSubscription<DocumentSnapshot>? _userStreamSubscription;
   StreamSubscription<QuerySnapshot>? _notificationsStreamSubscription;
+  StreamSubscription<QuerySnapshot>? _messagesStreamSubscription;
   int _selectedIndex = 0;
   String _userName = "Profile";
   late List<Widget> _widgetOptions;
   late FirestoreService _firestoreService;
   late AirlineFetcher _airlineFetcher;
   bool _hasUnreadNotifications = false;
+  bool _hasUnreadMessages = false;
 
   @override
   void initState() {
@@ -33,9 +36,10 @@ class _TabsState extends State<Tabs> {
     _airlineFetcher = AirlineFetcher();
     _initUserStream();
     _initNotificationsStream();
+    _initMessagesStream();
     _widgetOptions = <Widget>[
       HomeScreen(onProfileTap: () {
-        _onItemTapped(3);
+        _onItemTapped(4);
       }),
       const MyStuffScreen(),
       NotificationsScreen(
@@ -43,6 +47,7 @@ class _TabsState extends State<Tabs> {
         airlineFetcher: _airlineFetcher,
         onOpen: _markNotificationsAsRead,
       ),
+      const MessagesScreen(),
       const ProfileScreen(),
     ];
   }
@@ -61,6 +66,29 @@ class _TabsState extends State<Tabs> {
                 (snapshot.data() as Map<String, dynamic>)['name'] ?? "Profile";
           });
         }
+      });
+    }
+  }
+
+  void _initMessagesStream() {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      _messagesStreamSubscription = FirebaseFirestore.instance
+          .collection('chats')
+          .where('participants', arrayContains: user.uid)
+          .snapshots()
+          .listen((snapshot) {
+        bool hasUnread = false;
+        for (var doc in snapshot.docs) {
+          final chatData = doc.data();
+          if ((chatData['unreadCount_${user.uid}'] ?? 0) > 0) {
+            hasUnread = true;
+            break;
+          }
+        }
+        setState(() {
+          _hasUnreadMessages = hasUnread;
+        });
       });
     }
   }
@@ -98,7 +126,7 @@ class _TabsState extends State<Tabs> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: _selectedIndex == 3
+      appBar: _selectedIndex == 4
           ? AppBar(
               title: Text(
                 _userName.toUpperCase(),
@@ -117,19 +145,29 @@ class _TabsState extends State<Tabs> {
       bottomNavigationBar: BottomNavigationBar(
         backgroundColor: Theme.of(context).colorScheme.surface,
         type: BottomNavigationBarType.fixed,
+        showSelectedLabels: true,
         items: <BottomNavigationBarItem>[
-          const BottomNavigationBarItem(
-            icon: Icon(Icons.home),
+          BottomNavigationBarItem(
+            icon: Icon(
+              Icons.home_outlined,
+              size: _selectedIndex == 0 ? 28 : 24,
+            ),
             label: 'Home',
           ),
-          const BottomNavigationBarItem(
-            icon: Icon(Icons.flight),
+          BottomNavigationBarItem(
+            icon: Icon(
+              Icons.flight_outlined,
+              size: _selectedIndex == 1 ? 28 : 24,
+            ),
             label: 'My Trips',
           ),
           BottomNavigationBarItem(
             icon: Stack(
               children: [
-                const Icon(Icons.notifications),
+                Icon(
+                  Icons.notifications_outlined,
+                  size: _selectedIndex == 2 ? 28 : 24,
+                ),
                 if (_hasUnreadNotifications)
                   Positioned(
                     right: 0,
@@ -148,15 +186,47 @@ class _TabsState extends State<Tabs> {
                   ),
               ],
             ),
-            label: 'Notifications',
+            label: 'Alerts',
           ),
-          const BottomNavigationBarItem(
-            icon: Icon(Icons.person),
+          BottomNavigationBarItem(
+            icon: Stack(
+              children: [
+                Icon(
+                  Icons.chat_bubble_outline_rounded,
+                  size: _selectedIndex == 3 ? 28 : 24,
+                ),
+                if (_hasUnreadMessages)
+                  Positioned(
+                    right: 0,
+                    top: 0,
+                    child: Container(
+                      padding: const EdgeInsets.all(1),
+                      decoration: BoxDecoration(
+                        color: Colors.red,
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      constraints: const BoxConstraints(
+                        minWidth: 12,
+                        minHeight: 12,
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+            label: 'Messages',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(
+              Icons.person_outline,
+              size: _selectedIndex == 4 ? 28 : 24,
+            ),
             label: 'Profile',
           ),
         ],
         currentIndex: _selectedIndex,
         selectedItemColor: Theme.of(context).colorScheme.inversePrimary,
+        unselectedItemColor:
+            Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
         onTap: _onItemTapped,
       ),
     );
@@ -166,6 +236,7 @@ class _TabsState extends State<Tabs> {
   void dispose() {
     _userStreamSubscription?.cancel();
     _notificationsStreamSubscription?.cancel();
+    _messagesStreamSubscription?.cancel();
     super.dispose();
   }
 }

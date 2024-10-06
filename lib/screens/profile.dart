@@ -62,6 +62,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
           .ref()
           .child('user_images')
           .child('${user.uid}.png');
+
+      try {
+        await ref.delete();
+      } catch (e) {
+        print('No previous image found or error deleting: $e');
+      }
+
       await ref.putFile(File(pickedImage.path));
 
       final url = await ref.getDownloadURL();

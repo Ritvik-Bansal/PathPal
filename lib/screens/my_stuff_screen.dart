@@ -9,6 +9,7 @@ import 'package:pathpal/data/airline_data.dart';
 import 'package:pathpal/receiver/receiver_form_state.dart';
 import 'package:pathpal/receiver/reciever_form_screen.dart';
 import 'package:pathpal/services/firestore_service.dart';
+import 'package:rxdart/rxdart.dart';
 
 class MyStuffScreen extends StatefulWidget {
   const MyStuffScreen({super.key});
@@ -50,12 +51,8 @@ class _MyStuffScreenState extends State<MyStuffScreen> {
       appBar: AppBar(
         title: const Text('My Trips'),
       ),
-      body: FutureBuilder<List<Widget>>(
-        future: Future.wait([
-          _buildContributorForms(),
-          _buildFavoritedContributors(),
-          _buildTentativeRequests(),
-        ]),
+      body: StreamBuilder<List<Widget>>(
+        stream: _getCombinedStream(),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());
@@ -91,19 +88,33 @@ class _MyStuffScreenState extends State<MyStuffScreen> {
     );
   }
 
-  Future<Widget> _buildContributorForms() async {
-    QuerySnapshot snapshot = await _firestore
+  Stream<List<Widget>> _getCombinedStream() {
+    return Rx.combineLatest3(
+      _getContributorFormsStream(),
+      _getFavoritedContributorsStream(),
+      _getTentativeRequestsStream(),
+      (List<Widget> contributorForms, List<Widget> favoritedContributors,
+          List<Widget> tentativeRequests) {
+        return [
+          ...contributorForms,
+          ...favoritedContributors,
+          ...tentativeRequests
+        ];
+      },
+    );
+  }
+
+  Stream<List<Widget>> _getContributorFormsStream() {
+    return _firestore
         .collection('contributors')
         .where('userId', isEqualTo: _auth.currentUser?.uid)
-        .get();
+        .snapshots()
+        .map((snapshot) {
+      if (snapshot.docs.isEmpty) {
+        return [SizedBox(height: 0)];
+      }
 
-    if (snapshot.docs.isEmpty) {
-      return SizedBox(height: 0);
-    }
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
+      return [
         Padding(
           padding: const EdgeInsets.all(16.0),
           child: Row(
@@ -139,40 +150,32 @@ class _MyStuffScreenState extends State<MyStuffScreen> {
             ],
           ),
         ),
-        ListView.builder(
-          shrinkWrap: true,
-          physics: NeverScrollableScrollPhysics(),
-          itemCount: snapshot.docs.length,
-          itemBuilder: (context, index) {
-            var doc = snapshot.docs[index];
-            var data = doc.data() as Map<String, dynamic>;
-            return ContributorFormCard(
-              data: data,
-              docId: doc.id,
-              onEdit: () => _editForm(doc.id, data),
-              onDelete: () => _deleteForm(doc.id),
-              airlineFetcher: _airlineFetcher,
-              firestoreService: _firestoreService,
-            );
-          },
-        ),
-      ],
-    );
+        ...snapshot.docs.map((doc) {
+          var data = doc.data();
+          return ContributorFormCard(
+            data: data,
+            docId: doc.id,
+            onEdit: () => _editForm(doc.id, data),
+            onDelete: () => _deleteForm(doc.id),
+            airlineFetcher: _airlineFetcher,
+            firestoreService: _firestoreService,
+          );
+        }).toList(),
+      ];
+    });
   }
 
-  Future<Widget> _buildTentativeRequests() async {
-    QuerySnapshot snapshot = await _firestore
+  Stream<List<Widget>> _getTentativeRequestsStream() {
+    return _firestore
         .collection('tentativeReceivers')
         .where('userId', isEqualTo: _auth.currentUser?.uid)
-        .get();
+        .snapshots()
+        .map((snapshot) {
+      if (snapshot.docs.isEmpty) {
+        return [SizedBox(height: 0)];
+      }
 
-    if (snapshot.docs.isEmpty) {
-      return SizedBox(height: 0);
-    }
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
+      return [
         Padding(
           padding: const EdgeInsets.all(16.0),
           child: Row(
@@ -208,24 +211,18 @@ class _MyStuffScreenState extends State<MyStuffScreen> {
             ],
           ),
         ),
-        ListView.builder(
-          shrinkWrap: true,
-          physics: NeverScrollableScrollPhysics(),
-          itemCount: snapshot.docs.length,
-          itemBuilder: (context, index) {
-            var doc = snapshot.docs[index];
-            var data = doc.data() as Map<String, dynamic>;
-            return TentativeRequestCard(
-              data: data,
-              docId: doc.id,
-              onDelete: () => _deleteTentativeRequest(doc.id),
-              onEdit: () => _editTentativeRequest(doc.id, data),
-              onTap: () => _navigateToFilteredContributors(data),
-            );
-          },
-        ),
-      ],
-    );
+        ...snapshot.docs.map((doc) {
+          var data = doc.data();
+          return TentativeRequestCard(
+            data: data,
+            docId: doc.id,
+            onDelete: () => _deleteTentativeRequest(doc.id),
+            onEdit: () => _editTentativeRequest(doc.id, data),
+            onTap: () => _navigateToFilteredContributors(data),
+          );
+        }).toList(),
+      ];
+    });
   }
 
   void _navigateToFilteredContributors(Map<String, dynamic> data) {
@@ -294,107 +291,83 @@ class _MyStuffScreenState extends State<MyStuffScreen> {
     );
   }
 
-  Future<Widget> _buildFavoritedContributors() async {
-    DocumentSnapshot userSnapshot =
-        await _firestore.collection('users').doc(_auth.currentUser?.uid).get();
+  Stream<List<Widget>> _getFavoritedContributorsStream() {
+    return _firestore
+        .collection('users')
+        .doc(_auth.currentUser?.uid)
+        .snapshots()
+        .switchMap((userSnapshot) {
+      if (!userSnapshot.exists) {
+        return Stream.value([SizedBox(height: 0)]);
+      }
 
-    if (!userSnapshot.exists) {
-      return SizedBox(height: 0);
-    }
+      var userData = userSnapshot.data();
+      if (userData == null) {
+        return Stream.value([SizedBox(height: 0)]);
+      }
 
-    var userData = userSnapshot.data() as Map<String, dynamic>?;
-    if (userData == null) {
-      return SizedBox(height: 0);
-    }
+      List<String> favoritedContributors =
+          List<String>.from(userData['favoritedContributors'] ?? []);
 
-    List<String> favoritedContributors =
-        List<String>.from(userData['favoritedContributors'] ?? []);
+      if (favoritedContributors.isEmpty) {
+        return Stream.value([SizedBox(height: 0)]);
+      }
 
-    if (favoritedContributors.isEmpty) {
-      return SizedBox(height: 0);
-    }
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Row(
-            children: [
-              Icon(Icons.check_circle, size: 24),
-              SizedBox(width: 8),
-              Text(
-                'My Favorite Matches',
-                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-              ),
-              SizedBox(width: 8),
-              IconButton(
-                icon: Icon(Icons.info_outline),
-                onPressed: () {
-                  showDialog(
-                    context: context,
-                    builder: (BuildContext context) {
-                      return AlertDialog(
-                        title: Text('My Favorite Matches'),
-                        content:
-                            Text('Flights favorited from previous matches'),
-                        actions: [
-                          TextButton(
-                            child: Text('OK'),
-                            onPressed: () {
-                              Navigator.of(context).pop();
-                            },
-                          ),
-                        ],
-                      );
-                    },
-                  );
-                },
-              ),
-            ],
+      return Stream.fromFuture(Future.wait(
+        favoritedContributors.map((contributorId) =>
+            _firestore.collection('contributors').doc(contributorId).get()),
+      )).map((contributorDocs) {
+        return [
+          Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Row(
+              children: [
+                Icon(Icons.check_circle, size: 24),
+                SizedBox(width: 8),
+                Text(
+                  'My Favorite Matches',
+                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                ),
+                SizedBox(width: 8),
+                IconButton(
+                  icon: Icon(Icons.info_outline),
+                  onPressed: () {
+                    showDialog(
+                      context: context,
+                      builder: (BuildContext context) {
+                        return AlertDialog(
+                          title: Text('My Favorite Matches'),
+                          content:
+                              Text('Flights favorited from previous matches'),
+                          actions: [
+                            TextButton(
+                              child: Text('OK'),
+                              onPressed: () {
+                                Navigator.of(context).pop();
+                              },
+                            ),
+                          ],
+                        );
+                      },
+                    );
+                  },
+                ),
+              ],
+            ),
           ),
-        ),
-        ListView.builder(
-          shrinkWrap: true,
-          physics: NeverScrollableScrollPhysics(),
-          itemCount: favoritedContributors.length,
-          itemBuilder: (context, index) {
-            return FutureBuilder<DocumentSnapshot>(
-              future: _firestore
-                  .collection('contributors')
-                  .doc(favoritedContributors[index])
-                  .get(),
-              builder: (context, contributorSnapshot) {
-                if (contributorSnapshot.connectionState ==
-                    ConnectionState.waiting) {
-                  return const ListTile(title: Text('Loading...'));
-                }
-
-                if (contributorSnapshot.hasError ||
-                    !contributorSnapshot.hasData) {
-                  return const ListTile(title: Text('Error loading trip'));
-                }
-
-                var contributorData =
-                    contributorSnapshot.data!.data() as Map<String, dynamic>?;
-                if (contributorData == null) {
-                  return const ListTile(title: Text('Trip data not available'));
-                }
-
-                return FavoritedContributorCard(
-                  contributorData: contributorData,
-                  onUnfavorite: () =>
-                      _unfavoriteContributor(favoritedContributors[index]),
-                  contributorId: favoritedContributors[index],
-                  airlineFetcher: _airlineFetcher,
-                  firestoreService: _firestoreService,
-                );
-              },
+          ...contributorDocs.where((doc) => doc.exists).map((doc) {
+            var contributorData = doc.data() as Map<String, dynamic>;
+            return FavoritedContributorCard(
+              contributorData: contributorData,
+              onUnfavorite: () => _unfavoriteContributor(doc.id),
+              contributorId: doc.id,
+              airlineFetcher: _airlineFetcher,
+              firestoreService: _firestoreService,
             );
-          },
-        ),
-      ],
-    );
+          }).toList(),
+        ];
+      });
+    });
   }
 
   void _editForm(String docId, Map<String, dynamic> data) {
@@ -423,16 +396,16 @@ class _MyStuffScreenState extends State<MyStuffScreen> {
               child: const Text('Delete'),
               onPressed: () async {
                 try {
-                  await _firestore
-                      .collection('contributors')
-                      .doc(docId)
-                      .delete();
+                  await _firestore.runTransaction((transaction) async {
+                    transaction.delete(
+                        _firestore.collection('contributors').doc(docId));
 
-                  await _firestoreService
-                      .deleteNotificationsForContributor(docId);
+                    await _firestoreService
+                        .deleteNotificationsForContributor(docId);
 
-                  await _firestoreService
-                      .removeContributorFromAllFavorites(docId);
+                    await _firestoreService
+                        .removeContributorFromAllFavorites(docId);
+                  });
 
                   Navigator.of(context).pop();
                   setState(() {});
@@ -477,13 +450,13 @@ class _MyStuffScreenState extends State<MyStuffScreen> {
                   await _firestoreService
                       .toggleFavoriteContributor(contributorId);
                   Navigator.of(context).pop();
-                  setState(() {});
                 } catch (e) {
                   ScaffoldMessenger.of(context).clearSnackBars();
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(content: Text('Error unfavoriting trip')),
                   );
                 }
+                setState(() {});
               },
             ),
           ],
