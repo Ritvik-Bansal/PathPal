@@ -65,9 +65,7 @@ class _AuthFormState extends State<AuthForm> {
 
     try {
       final user = await widget.googleAuthFlow.startAuthFlow(context);
-      if (user != null) {
-        print('Successfully signed in with Google: ${user.displayName}');
-      }
+      if (user != null) {}
     } finally {
       _safeSetState(() {});
     }

@@ -19,24 +19,19 @@ class GoogleAuthFlow {
 
   Future<User?> startAuthFlow(BuildContext context) async {
     try {
-      print("Starting Google Sign-In process");
       final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
       if (googleUser == null) {
-        print("Google Sign-In was canceled by the user");
         return null;
       }
 
-      print("Google Sign-In successful, getting auth details");
       final GoogleSignInAuthentication googleAuth =
           await googleUser.authentication;
 
-      print("Creating credential");
       final credential = GoogleAuthProvider.credential(
         accessToken: googleAuth.accessToken,
         idToken: googleAuth.idToken,
       );
 
-      print("Signing in to Firebase");
       final UserCredential userCredential =
           await _auth.signInWithCredential(credential);
       final User? user = userCredential.user;

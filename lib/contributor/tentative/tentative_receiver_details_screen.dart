@@ -197,13 +197,11 @@ class _TentativeReceiverDetailScreenState
     });
 
     try {
-      print('Starting _sendEmailToReceiver');
       final currentUserData =
           await widget.firestoreService.getCurrentUserData();
       if (currentUserData == null) {
         throw Exception('Current user data not found');
       }
-      print('Current user data retrieved');
 
       final emailContent = _buildEmailContent(
         recipientName: widget.receiverData['userName'] ?? '',

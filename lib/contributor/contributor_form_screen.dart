@@ -652,7 +652,6 @@ class _ContributorFormScreenState extends State<ContributorFormScreen> {
       );
 
       if (response.statusCode == 200) {
-        print('Confirmation email sent successfully');
       } else {
         throw Exception('Failed to send confirmation email: ${response.body}');
       }
