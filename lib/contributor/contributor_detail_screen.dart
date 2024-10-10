@@ -173,10 +173,17 @@ class _ContributorDetailScreenState extends State<ContributorDetailScreen> {
           return _buildLoadingScaffold(context, 'Volunteer not found');
         }
 
-        var contributorData = snapshot.data![0].data() as Map<String, dynamic>;
-        var userData = snapshot.data![1].data() as Map<String, dynamic>;
+        var contributorData = snapshot.data![0].data();
+        var userData = snapshot.data![1].data();
 
-        return _buildMainScaffold(context, contributorData, userData);
+        if (contributorData == null || userData == null) {
+          return _buildLoadingScaffold(context, 'Data not found');
+        }
+
+        return _buildMainScaffold(
+            context,
+            contributorData as Map<String, dynamic>,
+            userData as Map<String, dynamic>);
       },
     );
   }
@@ -241,30 +248,32 @@ class _ContributorDetailScreenState extends State<ContributorDetailScreen> {
             _buildFlightRoute(contributorData),
             const SizedBox(height: 10),
             MapWidget(contributorData: contributorData),
-            const SizedBox(height: 10),
-            OutlinedButton(
-              onPressed: _isOwnSubmission || !_canContact
-                  ? null
-                  : () => _showContactConfirmationDialog(
-                      context, contributorData, userData),
-              style: OutlinedButton.styleFrom(
-                backgroundColor: _isOwnSubmission || !_canContact
-                    ? Colors.grey[300]
-                    : const Color.fromARGB(255, 180, 221, 255),
-                textStyle: TextStyle(
-                  color: _isOwnSubmission || !_canContact
-                      ? Colors.grey[600]
-                      : Colors.black,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 18,
+            if (!_isOwnSubmission) ...[
+              const SizedBox(height: 10),
+              OutlinedButton(
+                onPressed: _isOwnSubmission || !_canContact
+                    ? null
+                    : () => _showContactConfirmationDialog(
+                        context, contributorData, userData),
+                style: OutlinedButton.styleFrom(
+                  backgroundColor: _isOwnSubmission || !_canContact
+                      ? Colors.grey[300]
+                      : const Color.fromARGB(255, 180, 221, 255),
+                  textStyle: TextStyle(
+                    color: _isOwnSubmission || !_canContact
+                        ? Colors.grey[600]
+                        : Colors.black,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 18,
+                  ),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
                 ),
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                child: Text(_hasContacted
+                    ? 'CONTACT VOLUNTEER AGAIN'
+                    : 'CONTACT THIS VOLUNTEER'),
               ),
-              child: Text(_hasContacted
-                  ? 'CONTACT VOLUNTEER AGAIN'
-                  : 'CONTACT THIS VOLUNTEER'),
-            ),
+            ],
             const SizedBox(height: 30),
           ],
         ),
@@ -302,8 +311,6 @@ class _ContributorDetailScreenState extends State<ContributorDetailScreen> {
         'lastMessageTimestamp': FieldValue.serverTimestamp(),
         'unreadCount_${currentUser.uid}': 0,
         'unreadCount_${contributorUserId}': 0,
-        'deleted_${currentUser.uid}': false,
-        'deleted_${contributorUserId}': false,
       });
     }
 
@@ -393,60 +400,52 @@ class _ContributorDetailScreenState extends State<ContributorDetailScreen> {
           ? receiverData['otherReason']
           : receiverData['reason'];
 
-      final emailContent = '''
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>A Traveler Wants to Connect with You</title>
-</head>
-<body style="margin:0; padding:0; background-color:#f7f9fc; font-family: Arial, sans-serif; color:#333;">
-  <div style="max-width:600px; margin:20px auto; background-color:#ffffff; border-radius:8px; box-shadow:0 2px 4px rgba(0, 0, 0, 0.1); overflow:hidden;">
-    <div style="background-color:#0073e6; color:#ffffff; padding:20px; text-align:center;">
-      <h1 style="margin:0; font-size:28px;">A Traveler Wants to Connect with You</h1>
-    </div>
-    <div style="padding:20px;">
-      <p style="font-size:16px; line-height:1.5;">
-        Hi <strong>${contributorName}</strong>,
-      </p>
-      <p style="font-size:16px; line-height:1.5;">
-        A traveler has expressed interest in connecting with you for travel assistance on your flight from ${contributorData['departureAirport']['iata']} to ${contributorData['arrivalAirport']['iata']}.
-      </p>
-      <div style="background-color:#f1f4f8; padding:15px; border-radius:5px; margin:20px 0;">
-        <h2 style="font-size:20px; color:#0073e6; margin-top:0;">Traveler's Details:</h2>
-        <p style="font-size:16px; line-height:1.5; margin:5px 0;">
-          <strong>Name:</strong> ${receiverData['userName']}<br>
-          <strong>Email:</strong> ${receiverData['userEmail']}<br>
-          <strong>Phone:</strong> ${receiverData['userPhone']}<br>
-          <strong>Reason for Assistance:</strong> ${reason}<br>
-          <strong>Party Size:</strong> ${receiverData['partySize']}
-        </p>
-      </div>
-      <p style="font-size:16px; line-height:1.5;">
-        Please reach out to the traveler if you are willing to assist them during their journey. Your help can make a big difference in their travel experience.
-      </p>
-      <p style="font-size:16px; line-height:1.5;">
-        Thank you for being a part of the PathPal community. Together, we're making travel smoother and more enjoyable for everyone! 🌟
-      </p>
-      <p style="font-size:16px; line-height:1.5;">
-        Safe travels,<br>
-        <strong>The PathPal Team</strong>
-      </p>
-    </div>
-    <div style="background-color:#f7f9fc; text-align:center; padding:15px;">
-      <p style="font-size:14px; color:#555; margin:5px 0;">
-        <a href="https://pathpal.org" style="color:#0073e6; text-decoration:none;">Visit our website</a> | 
-        <a href="mailto:info@pathpal.org" style="color:#0073e6; text-decoration:none;">Contact Support</a>
-      </p>
-      <p style="font-size:12px; color:#999; margin:5px 0;">
-        © ${DateTime.now().year} PathPal. All rights reserved.
-      </p>
-    </div>
-  </div>
-</body>
-</html>
-''';
+      String contributorFlightInfo = '''
+      <h3>Your Flight Information:</h3>
+      <p>From: ${contributorData['departureAirport']['name']} (${contributorData['departureAirport']['iata']})</p>
+      <p>To: ${contributorData['arrivalAirport']['name']} (${contributorData['arrivalAirport']['iata']})</p>
+      <p>Flight Number: ${contributorData['flightNumberFirstLeg']}</p>
+      <p>Date: ${DateFormat('MMM d, yyyy').format((contributorData['flightDateTimeFirstLeg'] as Timestamp).toDate())}</p>
+      <p>Time: ${DateFormat('h:mm a').format((contributorData['flightDateTimeFirstLeg'] as Timestamp).toDate())}</p>
+    ''';
+
+      if (contributorData['numberOfLayovers'] > 0) {
+        contributorFlightInfo += '''
+        <h4>Layover:</h4>
+        <p>At: ${contributorData['firstLayoverAirport']['name']} (${contributorData['firstLayoverAirport']['iata']})</p>
+        <p>Next Flight Number: ${contributorData['flightNumberSecondLeg']}</p>
+        <p>Date: ${DateFormat('MMM d, yyyy').format((contributorData['flightDateTimeSecondLeg'] as Timestamp).toDate())}</p>
+        <p>Time: ${DateFormat('h:mm a').format((contributorData['flightDateTimeSecondLeg'] as Timestamp).toDate())}</p>
+      ''';
+      }
+
+      if (contributorData['numberOfLayovers'] > 1) {
+        contributorFlightInfo += '''
+        <h4>Second Layover:</h4>
+        <p>At: ${contributorData['secondLayoverAirport']['name']} (${contributorData['secondLayoverAirport']['iata']})</p>
+        <p>Final Flight Number: ${contributorData['flightNumberThirdLeg']}</p>
+        <p>Date: ${DateFormat('MMM d, yyyy').format((contributorData['flightDateTimeThirdLeg'] as Timestamp).toDate())}</p>
+        <p>Time: ${DateFormat('h:mm a').format((contributorData['flightDateTimeThirdLeg'] as Timestamp).toDate())}</p>
+      ''';
+      }
+
+      final emailContent = _buildEmailContent(
+        recipientName: contributorName,
+        title: 'A Traveler Wants to Connect with You',
+        introText:
+            'A traveler has expressed interest in connecting with you for travel assistance on your upcoming flight.',
+        flightDetails: contributorFlightInfo,
+        contactDetails: '''
+        <strong>Name:</strong> ${receiverData['userName']}<br>
+        <strong>Email:</strong> ${receiverData['userEmail']}<br>
+        <strong>Phone:</strong> ${receiverData['userPhone']}<br>
+        <strong>Reason for Assistance:</strong> ${reason}<br>
+        <strong>Party Size:</strong> ${receiverData['partySize']}
+      ''',
+        contactTitle: "Traveler's Details:",
+        callToAction:
+            "Please reach out to the traveler if you are willing to assist them during their journey. Your help can make a big difference in their travel experience.",
+      );
 
       final response = await http.post(
         Uri.parse('https://api.mailjet.com/v3.1/send'),
@@ -492,6 +491,71 @@ class _ContributorDetailScreenState extends State<ContributorDetailScreen> {
         );
       }
     }
+  }
+
+  String _buildEmailContent({
+    required String recipientName,
+    required String title,
+    required String introText,
+    required String flightDetails,
+    required String contactDetails,
+    required String contactTitle,
+    required String callToAction,
+  }) {
+    return '''
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>$title</title>
+</head>
+<body style="margin:0; padding:0; background-color:#f7f9fc; font-family: Arial, sans-serif; color:#333;">
+  <div style="max-width:600px; margin:20px auto; background-color:#ffffff; border-radius:8px; box-shadow:0 2px 4px rgba(0, 0, 0, 0.1); overflow:hidden;">
+    <div style="background-color:#0073e6; color:#ffffff; padding:20px; text-align:center;">
+      <h1 style="margin:0; font-size:28px;">$title</h1>
+    </div>
+    <div style="padding:20px;">
+      <p style="font-size:16px; line-height:1.5;">
+        Hi <strong>$recipientName</strong>,
+      </p>
+      <p style="font-size:16px; line-height:1.5;">
+        $introText
+      </p>
+      <div style="background-color:#f1f4f8; padding:15px; border-radius:5px; margin:20px 0;">
+        <h3 style="font-size:20px; color:#0073e6; margin-top:0;">Flight Details:</h3>
+        $flightDetails
+      </div>
+      <div style="background-color:#f1f4f8; padding:15px; border-radius:5px; margin:20px 0;">
+        <h3 style="font-size:20px; color:#0073e6; margin-top:0;">$contactTitle</h3>
+        <p style="font-size:16px; line-height:1.5; margin:5px 0;">
+          $contactDetails
+        </p>
+      </div>
+      <p style="font-size:16px; line-height:1.5;">
+        $callToAction
+      </p>
+      <p style="font-size:16px; line-height:1.5;">
+        Thank you for being a part of the PathPal community. Together, we're making travel smoother and more enjoyable for everyone! 🌟
+      </p>
+      <p style="font-size:16px; line-height:1.5;">
+        Safe travels,<br>
+        <strong>The PathPal Team</strong>
+      </p>
+    </div>
+    <div style="background-color:#f7f9fc; text-align:center; padding:15px;">
+      <p style="font-size:14px; color:#555; margin:5px 0;">
+        <a href="https://pathpal.org" style="color:#0073e6; text-decoration:none;">Visit our website</a> | 
+        <a href="mailto:info@pathpal.org" style="color:#0073e6; text-decoration:none;">Contact Support</a>
+      </p>
+      <p style="font-size:12px; color:#999; margin:5px 0;">
+        © ${DateTime.now().year} PathPal. All rights reserved.
+      </p>
+    </div>
+  </div>
+</body>
+</html>
+''';
   }
 
   String _formatDate(Timestamp timestamp) {

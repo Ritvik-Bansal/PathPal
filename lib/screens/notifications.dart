@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:pathpal/contributor/contributor_detail_screen.dart';
-import 'package:pathpal/screens/receiver_info_dialog.dart';
+import 'package:pathpal/screens/contact_request_detail_screen.dart';
+import 'package:pathpal/screens/seeker_detail_screen.dart';
 import 'package:pathpal/services/firestore_service.dart';
 import 'package:pathpal/data/airline_data.dart';
 
@@ -112,7 +113,8 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                         leading: _buildNotificationImage(notification),
                         title: Text(
                           notification['title'] ?? 'No title',
-                          style: TextStyle(fontWeight: FontWeight.bold),
+                          style: TextStyle(
+                              fontWeight: FontWeight.bold, fontSize: 15),
                         ),
                         subtitle: Text(notification['body'] ?? 'No body'),
                         trailing: Text(
@@ -181,32 +183,105 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   }
 
   void _handleNotificationTap(
-      BuildContext context, DocumentSnapshot notification) {
-    final title = notification['title'] as String?;
+      BuildContext context, DocumentSnapshot notification) async {
+    try {
+      final title = notification.get('title') as String?;
 
-    if (title == 'Potential Volunteer Found') {
-      _showContributorDetails(context, notification);
-    } else if (title == 'New Contact Request' ||
-        title == 'A Fellow Seeker Contacted You') {
-      _showReceiverInfo(context, notification);
+      if (title == 'Potential Volunteer Found') {
+        final contributorId = notification.data() is Map
+            ? (notification.data() as Map)['contributorId'] as String?
+            : null;
+        if (contributorId != null) {
+          _showContributorDetails(context, notification);
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Volunteer information not found')),
+          );
+        }
+      } else if (title == 'New Contact Request') {
+        final data = notification.data() as Map<String, dynamic>?;
+        final receiverId = data?['receiverId'] as String?;
+        final contributorId = data?['contributorId'] as String?;
+
+        if (receiverId != null && contributorId != null) {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => ContactRequestDetailScreen(
+                receiverId: receiverId,
+                contributorId: contributorId,
+              ),
+            ),
+          );
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+                content: Text('Contact request information is incomplete')),
+          );
+        }
+      } else if (title == 'A Fellow Seeker Contacted You') {
+        final data = notification.data() as Map<String, dynamic>?;
+        final receiverDocId = data?['receiverId'] as String?;
+
+        if (receiverDocId != null) {
+          final receiverSnapshot = await FirebaseFirestore.instance
+              .collection('receivers')
+              .doc(receiverDocId)
+              .get();
+
+          final senderUserId = receiverSnapshot.data()?['userId'] as String?;
+
+          if (senderUserId != null) {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => SeekerDetailScreen(
+                  senderUserId: senderUserId,
+                  receiverDocId: receiverDocId,
+                ),
+              ),
+            );
+          } else {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Seeker information is incomplete')),
+            );
+          }
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Receiver document ID not found')),
+          );
+        }
+      }
+    } catch (e) {
+      print('Error handling notification tap: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Error accessing notification details')),
+      );
     }
   }
 
   void _showContributorDetails(
       BuildContext context, DocumentSnapshot notification) async {
-    final contributorId = notification['contributorId'] as String?;
-    if (contributorId != null) {
+    try {
+      final data = notification.data() as Map<String, dynamic>?;
+      final contributorDocId = data?['contributorDocId'] as String?;
+      if (contributorDocId == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Volunteer ID not found')),
+        );
+        return;
+      }
+
       final contributorDoc = await FirebaseFirestore.instance
           .collection('contributors')
-          .doc(contributorId)
+          .doc(contributorDocId)
           .get();
-
       if (contributorDoc.exists) {
         Navigator.push(
           context,
           MaterialPageRoute(
             builder: (context) => ContributorDetailScreen(
-              contributorId: contributorId,
+              contributorId: contributorDocId,
               userId: FirebaseAuth.instance.currentUser!.uid,
               airlineFetcher: widget.airlineFetcher,
               firestoreService: widget.firestoreService,
@@ -218,18 +293,10 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
           const SnackBar(content: Text('Volunteer details not found')),
         );
       }
-    }
-  }
-
-  void _showReceiverInfo(BuildContext context, DocumentSnapshot notification) {
-    final userId = notification['receiverId'] as String?;
-    if (userId != null) {
-      showDialog(
-        context: context,
-        builder: (BuildContext context) => ReceiverInfoDialog(
-          userId: userId,
-          isContributor: false,
-        ),
+    } catch (e) {
+      print('Error showing contributor details: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Error accessing volunteer details')),
       );
     }
   }

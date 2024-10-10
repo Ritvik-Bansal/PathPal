@@ -108,9 +108,14 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
               Image.asset('assets/icon/icon_removed_bg.png'),
               const Text('Please verify your email to continue.'),
               const SizedBox(height: 5),
-              const Text(
+              Padding(
+                padding: EdgeInsets.symmetric(horizontal: 15),
+                child: const Text(
                   'If you don\'t see the email in your inbox, please check you spam.',
-                  style: TextStyle(fontWeight: FontWeight.bold)),
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                  textAlign: TextAlign.center,
+                ),
+              ),
               const SizedBox(height: 20),
               ElevatedButton(
                 onPressed: canResendEmail ? sendVerificationEmail : null,

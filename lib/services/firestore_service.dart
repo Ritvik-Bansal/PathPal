@@ -307,6 +307,8 @@ class FirestoreService {
 
     final contributorData = contributorDoc.data() as Map<String, dynamic>;
     final contributorUserId = contributorData['userId'] as String?;
+    final departureAirport = contributorData['departureAirport']['iata'];
+    final arrivalAirport = contributorData['arrivalAirport']['iata'];
 
     if (contributorUserId == null) {
       throw Exception('Volunteer userId not found');
@@ -326,8 +328,9 @@ class FirestoreService {
     await addNotification(
       contributorUserId,
       'New Contact Request',
-      'A traveler has requested to connect with you.',
+      'A traveler has requested to connect with you for your $departureAirport to $arrivalAirport flight',
       receiverDocId: receiverDocId,
+      contributorId: contributorId,
     );
   }
 
@@ -601,13 +604,15 @@ class FirestoreService {
   }
 
   Future<void> addNotification(String userId, String title, String body,
-      {String? contributorDocId, String? receiverDocId}) async {
+      {String? contributorId,
+      String? receiverDocId,
+      String? contributorDocId}) async {
     try {
       String? imageUrl;
       if (title == 'Potential Volunteer Found') {
         imageUrl = 'assets/icon/pathpal_logo.png';
       } else if (title == 'New Contact Request' ||
-          title == 'A Fellow Receiver Contacted You') {
+          title == 'A Fellow Seeker Contacted You') {
         if (receiverDocId != null) {
           final receiverDoc =
               await _firestore.collection('receivers').doc(receiverDocId).get();
@@ -626,7 +631,8 @@ class FirestoreService {
         'body': body,
         'createdAt': FieldValue.serverTimestamp(),
         'read': false,
-        if (contributorDocId != null) 'contributorId': contributorDocId,
+        if (contributorDocId != null) 'contributorDocId': contributorDocId,
+        if (contributorId != null) 'contributorId': contributorId,
         if (receiverDocId != null) 'receiverId': receiverDocId,
         if (imageUrl != null) 'imageUrl': imageUrl,
       });

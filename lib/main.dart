@@ -104,7 +104,7 @@ class MyApp extends StatelessWidget {
                                 child: CircularProgressIndicator()),
                           );
                         }
-                        if (docSnapshot.hasData) {
+                        if (docSnapshot.hasData && docSnapshot.data!.exists) {
                           final userData =
                               docSnapshot.data!.data() as Map<String, dynamic>?;
                           final name = userData?['name'] as String?;

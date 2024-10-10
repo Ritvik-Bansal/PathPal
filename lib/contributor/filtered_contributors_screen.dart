@@ -221,7 +221,8 @@ class _FilteredContributorsScreenState
                         return const ListTile(
                             title: Text('Error loading user data'));
                       }
-                      if (!userSnapshot.hasData) {
+                      if (!userSnapshot.hasData ||
+                          userSnapshot.data!.data() == null) {
                         return const ListTile(title: Text('User not found'));
                       }
                       var userData =

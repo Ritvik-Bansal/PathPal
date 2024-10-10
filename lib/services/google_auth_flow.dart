@@ -46,6 +46,8 @@ class GoogleAuthFlow {
         return null;
       }
 
+      _dismissKeyboard(context);
+
       final hasFullName = await _checkAndUpdateUserData(user);
 
       if (!hasFullName) {
@@ -65,6 +67,10 @@ class GoogleAuthFlow {
       print('Error during Google Sign-In: $error');
     }
     return null;
+  }
+
+  void _dismissKeyboard(BuildContext context) {
+    FocusScope.of(context).unfocus();
   }
 
   Future<bool> _checkAndUpdateUserData(User user) async {

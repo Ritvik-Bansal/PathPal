@@ -205,59 +205,29 @@ class _TentativeReceiverDetailScreenState
       }
       print('Current user data retrieved');
 
-      final emailContent = '''
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>A Seeker Wants to Connect with You</title>
-</head>
-<body style="margin:0; padding:0; background-color:#f7f9fc; font-family: Arial, sans-serif; color:#333;">
-  <div style="max-width:600px; margin:20px auto; background-color:#ffffff; border-radius:8px; box-shadow:0 2px 4px rgba(0, 0, 0, 0.1); overflow:hidden;">
-    <div style="background-color:#0073e6; color:#ffffff; padding:20px; text-align:center;">
-      <h1 style="margin:0; font-size:28px;">A Seeker Wants to Connect with You</h1>
-    </div>
-    <div style="padding:20px;">
-      <p style="font-size:16px; line-height:1.5;">
-        Hi ${widget.receiverData['userName']},
-      </p>
-      <p style="font-size:16px; line-height:1.5;">
-        A Seeker has expressed interest in assisting you during your travel from ${widget.receiverData['startAirport']['name']} to ${widget.receiverData['endAirport']['name']}.
-      </p>
-      <div style="background-color:#f1f4f8; padding:15px; border-radius:5px; margin:20px 0;">
-        <h2 style="font-size:20px; color:#0073e6; margin-top:0;">Seeker's Details:</h2>
+      final emailContent = _buildEmailContent(
+        recipientName: widget.receiverData['userName'] ?? '',
+        title: 'A Seeker Wants to Connect with You',
+        introText:
+            'A Seeker has expressed interest in your travel request from ${widget.receiverData['startAirport']['name']} to ${widget.receiverData['endAirport']['name']}.',
+        flightDetails: '''
         <p style="font-size:16px; line-height:1.5; margin:5px 0;">
-          <strong>Name:</strong> ${currentUserData['name']}<br>
-          <strong>Email:</strong> ${currentUserData['email']}<br>
-          <strong>Phone:</strong> ${currentUserData['phone'] ?? 'Not provided'}<br>
+          <strong>From:</strong> ${widget.receiverData['startAirport']['name']} (${widget.receiverData['startAirport']['iata']})<br>
+          <strong>To:</strong> ${widget.receiverData['endAirport']['name']} (${widget.receiverData['endAirport']['iata']})<br>
+          <strong>Date Range:</strong> ${_formatDate(widget.receiverData['startDate'])} - ${_formatDate(widget.receiverData['endDate'])}<br>
+          <strong>Reason for Travel:</strong> ${widget.receiverData['reason']}
+          ${widget.receiverData['otherReason'] != null && widget.receiverData['otherReason'].isNotEmpty ? '<br><strong>Other Reason:</strong> ${widget.receiverData['otherReason']}' : ''}
         </p>
-      </div>
-      <p style="font-size:16px; line-height:1.5;">
-        Please feel free to reach out to the Seeker if you would like their assistance during your journey.
-      </p>
-      <p style="font-size:16px; line-height:1.5;">
-        Thank you for being a part of the PathPal community. We hope this connection enhances your travel experience!
-      </p>
-      <p style="font-size:16px; line-height:1.5;">
-        Safe travels,<br>
-        <strong>The PathPal Team</strong>
-      </p>
-    </div>
-    <div style="background-color:#f7f9fc; text-align:center; padding:15px;">
-      <p style="font-size:14px; color:#555; margin:5px 0;">
-        <a href="https://pathpal.org" style="color:#0073e6; text-decoration:none;">Visit our website</a> | 
-        <a href="mailto:info@pathpal.org" style="color:#0073e6; text-decoration:none;">Contact Support</a>
-      </p>
-      <p style="font-size:12px; color:#999; margin:5px 0;">
-        © ${DateTime.now().year} PathPal. All rights reserved.
-      </p>
-    </div>
-  </div>
-</body>
-</html>
-''';
-
+      ''',
+        contactDetails: '''
+        <strong>Name:</strong> ${currentUserData['name']}<br>
+        <strong>Email:</strong> ${currentUserData['email']}<br>
+        <strong>Phone:</strong> ${currentUserData['phone'] ?? 'Not provided'}<br>
+      ''',
+        contactTitle: "Seeker's Details:",
+        callToAction:
+            "Please feel free to reach out to the Seeker if you would like their assistance during your journey.",
+      );
       print('Sending email');
       final response = await http.post(
         Uri.parse('https://api.mailjet.com/v3.1/send'),
@@ -284,51 +254,37 @@ class _TentativeReceiverDetailScreenState
         }),
       );
 
-      print('Email API response status: ${response.statusCode}');
-      print('Email API response body: ${response.body}');
-
       if (response.statusCode == 200) {
-        print('Email sent successfully, adding to contacted list');
         await widget.firestoreService
             .addContactedTentativeReceiver(widget.receiverData['userId'] ?? '');
-        print('Added to contacted list');
 
         final user = FirebaseAuth.instance.currentUser;
         if (user == null) throw Exception('No authenticated user found');
-        print("Authenticated user found: ${user.uid}");
 
-        print("Querying receivers collection");
         QuerySnapshot receiverQuery = await FirebaseFirestore.instance
             .collection('receivers')
             .where('userId', isEqualTo: user.uid)
             .limit(1)
             .get();
-        print("Receiver query completed");
 
         String? receiverDocId;
         if (receiverQuery.docs.isNotEmpty) {
           receiverDocId = receiverQuery.docs.first.id;
-          print("Receiver document ID: $receiverDocId");
-        } else {
-          print("No receiver document found");
-        }
+        } else {}
 
         String startLocation =
             widget.receiverData['startAirport']?['iata'] ?? 'Unknown';
         String endLocation =
             widget.receiverData['endAirport']?['iata'] ?? 'Unknown';
         String notificationBody =
-            'A Seeker has expressed interest in your seeker request from $startLocation to $endLocation.';
-        print("Notification body prepared");
+            'A Seeker has expressed interest in your request from $startLocation to $endLocation.';
 
-        print("Adding notification");
         await widget.firestoreService.addNotification(
           widget.receiverData['userId'] ?? '',
           'A Fellow Seeker Contacted You',
           notificationBody,
           receiverDocId: receiverDocId,
         );
-        print('Notification added');
 
         if (mounted) {
           setState(() {
@@ -350,7 +306,71 @@ class _TentativeReceiverDetailScreenState
         _showMessage(context, 'An error occurred: ${e.toString()}');
       }
     }
-    print('_sendEmailToReceiver completed');
+  }
+
+  String _buildEmailContent({
+    required String recipientName,
+    required String title,
+    required String introText,
+    required String flightDetails,
+    required String contactDetails,
+    required String contactTitle,
+    required String callToAction,
+  }) {
+    return '''
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>$title</title>
+</head>
+<body style="margin:0; padding:0; background-color:#f7f9fc; font-family: Arial, sans-serif; color:#333;">
+  <div style="max-width:600px; margin:20px auto; background-color:#ffffff; border-radius:8px; box-shadow:0 2px 4px rgba(0, 0, 0, 0.1); overflow:hidden;">
+    <div style="background-color:#0073e6; color:#ffffff; padding:20px; text-align:center;">
+      <h1 style="margin:0; font-size:28px;">$title</h1>
+    </div>
+    <div style="padding:20px;">
+      <p style="font-size:16px; line-height:1.5;">
+        Hi <strong>$recipientName</strong>,
+      </p>
+      <p style="font-size:16px; line-height:1.5;">
+        $introText
+      </p>
+      <div style="background-color:#f1f4f8; padding:15px; border-radius:5px; margin:20px 0;">
+        <h3 style="font-size:20px; color:#0073e6; margin-top:0;">Flight Details:</h3>
+        $flightDetails
+      </div>
+      <div style="background-color:#f1f4f8; padding:15px; border-radius:5px; margin:20px 0;">
+        <h3 style="font-size:20px; color:#0073e6; margin-top:0;">$contactTitle</h3>
+        <p style="font-size:16px; line-height:1.5; margin:5px 0;">
+          $contactDetails
+        </p>
+      </div>
+      <p style="font-size:16px; line-height:1.5;">
+        $callToAction
+      </p>
+      <p style="font-size:16px; line-height:1.5;">
+        Thank you for being a part of the PathPal community. We hope this connection enhances your travel experience!
+      </p>
+      <p style="font-size:16px; line-height:1.5;">
+        Safe travels,<br>
+        <strong>The PathPal Team</strong>
+      </p>
+    </div>
+    <div style="background-color:#f7f9fc; text-align:center; padding:15px;">
+      <p style="font-size:14px; color:#555; margin:5px 0;">
+        <a href="https://pathpal.org" style="color:#0073e6; text-decoration:none;">Visit our website</a> | 
+        <a href="mailto:info@pathpal.org" style="color:#0073e6; text-decoration:none;">Contact Support</a>
+      </p>
+      <p style="font-size:12px; color:#999; margin:5px 0;">
+        © ${DateTime.now().year} PathPal. All rights reserved.
+      </p>
+    </div>
+  </div>
+</body>
+</html>
+''';
   }
 
   void _showMessage(BuildContext context, String message) {

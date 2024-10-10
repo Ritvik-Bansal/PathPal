@@ -4,6 +4,7 @@ import 'dart:convert';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:pathpal/contributor/contributor_form_state.dart';
 import 'package:pathpal/services/firestore_service.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class EmailService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
@@ -17,6 +18,7 @@ class EmailService {
     String userId,
     ContributorFormState formState,
     String contributorDocId,
+    String contributorId,
   ) async {
     try {
       final emailContent = '''
@@ -123,12 +125,23 @@ class EmailService {
         print('Response body: ${response.body}');
       }
 
+      DocumentSnapshot contributorDoc = await _firestore
+          .collection('contributors')
+          .doc(contributorDocId)
+          .get();
+
+      if (!contributorDoc.exists) {
+        throw Exception('Contributor document not found');
+      }
+
+      String contributorId = contributorDoc.get('userId') as String;
+
       await _firestoreService.addNotification(
-        userId,
-        'Potential Volunteer Found',
-        'A Volunteer has submitted a flight that matches your seeker request.',
-        contributorDocId: contributorDocId,
-      );
+          userId,
+          'Potential Volunteer Found',
+          'A Volunteer has submitted a flight that matches your seeker request.',
+          contributorDocId: contributorDocId,
+          contributorId: contributorId);
 
       print('Email notification data saved to Firestore');
     } catch (e) {
@@ -145,6 +158,11 @@ class EmailService {
         .where('endAirport.iata', isEqualTo: formState.arrivalAirport?.iata)
         .get();
 
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) throw Exception('No authenticated user found');
+
+    final contributorId = user.uid;
+
     for (QueryDocumentSnapshot doc in tentativeReceivers.docs) {
       Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
       DateTime startDate = (data['startDate'] as Timestamp).toDate();
@@ -156,7 +174,13 @@ class EmailService {
         String userName = data['userName'];
         String userId = data['userId'];
         await sendEmailToTentativeReceiver(
-            userEmail, userName, userId, formState, contributorDocId);
+          userEmail,
+          userName,
+          userId,
+          formState,
+          contributorDocId,
+          contributorId,
+        );
       }
     }
   }
