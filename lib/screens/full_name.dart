@@ -41,33 +41,35 @@ class _FullNameScreenState extends State<FullNameScreen> {
     return Scaffold(
       backgroundColor: Theme.of(context).colorScheme.surface,
       appBar: AppBar(title: Text('Additonal Information')),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Form(
-          key: _formKey,
-          child: Column(
-            children: [
-              const SizedBox(height: 120),
-              Image.asset('assets/icon/icon_removed_bg.png'),
-              TextFormField(
-                decoration: InputDecoration(labelText: 'Full Name'),
-                validator: (value) {
-                  if (value == null || value.trim().isEmpty) {
-                    return 'Please enter your full name';
-                  }
-                  if (!value.contains(' ')) {
-                    return 'Please enter your first and last name';
-                  }
-                  return null;
-                },
-                onSaved: (value) => _fullName = value!,
-              ),
-              SizedBox(height: 20),
-              ElevatedButton(
-                onPressed: _submit,
-                child: Text('Continue'),
-              ),
-            ],
+      body: SingleChildScrollView(
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Form(
+            key: _formKey,
+            child: Column(
+              children: [
+                const SizedBox(height: 120),
+                Image.asset('assets/icon/icon_removed_bg.png'),
+                TextFormField(
+                  decoration: InputDecoration(labelText: 'Full Name'),
+                  validator: (value) {
+                    if (value == null || value.trim().isEmpty) {
+                      return 'Please enter your full name';
+                    }
+                    if (!value.contains(' ')) {
+                      return 'Please enter your first and last name';
+                    }
+                    return null;
+                  },
+                  onSaved: (value) => _fullName = value!,
+                ),
+                SizedBox(height: 20),
+                ElevatedButton(
+                  onPressed: _submit,
+                  child: Text('Continue'),
+                ),
+              ],
+            ),
           ),
         ),
       ),

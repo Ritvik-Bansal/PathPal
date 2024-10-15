@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:pathpal/screens/chat_screen.dart';
 import 'package:pathpal/services/firestore_service.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
@@ -52,6 +53,12 @@ class _TentativeReceiverDetailScreenState
       backgroundColor: Theme.of(context).colorScheme.surface,
       appBar: AppBar(
         title: Text('Seeker Details'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.chat_bubble_outline_rounded),
+            onPressed: () => _startChat(context),
+          ),
+        ],
       ),
       body: _isLoading
           ? Center(
@@ -80,8 +87,8 @@ class _TentativeReceiverDetailScreenState
                     child: ElevatedButton(
                       onPressed: () => _showContactConfirmationDialog(context),
                       child: Text(_hasContacted
-                          ? 'Contact This Receiver Again'
-                          : 'Contact This Receiver'),
+                          ? 'Contact This Seeker Again'
+                          : 'Contact This Seeker'),
                       style: ElevatedButton.styleFrom(
                         padding:
                             EdgeInsets.symmetric(horizontal: 50, vertical: 15),
@@ -91,6 +98,54 @@ class _TentativeReceiverDetailScreenState
                 ],
               ),
             ),
+    );
+  }
+
+  void _startChat(BuildContext context) async {
+    final currentUser = FirebaseAuth.instance.currentUser;
+    if (currentUser == null) return;
+
+    final receiverUserId = widget.receiverData['userId'] as String?;
+    if (receiverUserId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+            content: Text(
+                'Unable to start chat. Receiver information is incomplete.')),
+      );
+      return;
+    }
+
+    final chatIdParts = [currentUser.uid, receiverUserId];
+    chatIdParts.sort();
+    final chatId = chatIdParts.join('_');
+
+    final chatDoc =
+        await FirebaseFirestore.instance.collection('chats').doc(chatId).get();
+
+    if (!chatDoc.exists) {
+      await FirebaseFirestore.instance.collection('chats').doc(chatId).set({
+        'participants': [currentUser.uid, receiverUserId],
+        'createdAt': FieldValue.serverTimestamp(),
+        'lastMessage': null,
+        'lastMessageTimestamp': FieldValue.serverTimestamp(),
+        'unreadCount_${currentUser.uid}': 0,
+        'unreadCount_$receiverUserId': 0,
+      });
+    }
+
+    final receiverName = widget.receiverData['userName'] ?? 'Seeker';
+    final receiverProfilePic = widget.receiverData['profilePicture'];
+
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => ChatScreen(
+          chatId: chatId,
+          otherUserId: receiverUserId,
+          otherUserName: receiverName,
+          otherUserProfilePic: receiverProfilePic,
+        ),
+      ),
     );
   }
 

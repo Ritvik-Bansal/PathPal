@@ -70,6 +70,7 @@ class _PersonalInfoScreenState extends State<PersonalInfoScreen> {
       'notifications',
       'tentativeReceivers'
     ];
+    await _deleteUserNotifications(userId);
 
     for (final collection in collections) {
       final querySnapshot = await _firestore
@@ -85,7 +86,6 @@ class _PersonalInfoScreenState extends State<PersonalInfoScreen> {
     await _deleteUserChats(userId);
 
     await _removeUserFromFavorites(userId);
-    await _deleteUserNotifications(userId);
   }
 
   Future<void> _deleteUserChats(String userId) async {
@@ -122,13 +122,32 @@ class _PersonalInfoScreenState extends State<PersonalInfoScreen> {
   }
 
   Future<void> _deleteUserNotifications(String userId) async {
-    final notificationsSnapshot = await _firestore
+    final userNotificationsSnapshot = await _firestore
         .collection('notifications')
         .where('userId', isEqualTo: userId)
         .get();
 
-    for (final doc in notificationsSnapshot.docs) {
+    for (final doc in userNotificationsSnapshot.docs) {
       await doc.reference.delete();
+    }
+
+    final receiverNotificationsSnapshot = await _firestore
+        .collection('notifications')
+        .where('receiverId', isNull: false)
+        .get();
+
+    for (final doc in receiverNotificationsSnapshot.docs) {
+      final receiverId = doc.data()['receiverId'] as String?;
+      if (receiverId != null) {
+        final receiverDoc =
+            await _firestore.collection('receivers').doc(receiverId).get();
+        if (receiverDoc.exists) {
+          final receiverUserId = receiverDoc.data()?['userId'] as String?;
+          if (receiverUserId == userId) {
+            await doc.reference.delete();
+          }
+        }
+      }
     }
   }
 

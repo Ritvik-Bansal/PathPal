@@ -400,34 +400,7 @@ class _ContributorDetailScreenState extends State<ContributorDetailScreen> {
           ? receiverData['otherReason']
           : receiverData['reason'];
 
-      String contributorFlightInfo = '''
-      <h3>Your Flight Information:</h3>
-      <p>From: ${contributorData['departureAirport']['name']} (${contributorData['departureAirport']['iata']})</p>
-      <p>To: ${contributorData['arrivalAirport']['name']} (${contributorData['arrivalAirport']['iata']})</p>
-      <p>Flight Number: ${contributorData['flightNumberFirstLeg']}</p>
-      <p>Date: ${DateFormat('MMM d, yyyy').format((contributorData['flightDateTimeFirstLeg'] as Timestamp).toDate())}</p>
-      <p>Time: ${DateFormat('h:mm a').format((contributorData['flightDateTimeFirstLeg'] as Timestamp).toDate())}</p>
-    ''';
-
-      if (contributorData['numberOfLayovers'] > 0) {
-        contributorFlightInfo += '''
-        <h4>Layover:</h4>
-        <p>At: ${contributorData['firstLayoverAirport']['name']} (${contributorData['firstLayoverAirport']['iata']})</p>
-        <p>Next Flight Number: ${contributorData['flightNumberSecondLeg']}</p>
-        <p>Date: ${DateFormat('MMM d, yyyy').format((contributorData['flightDateTimeSecondLeg'] as Timestamp).toDate())}</p>
-        <p>Time: ${DateFormat('h:mm a').format((contributorData['flightDateTimeSecondLeg'] as Timestamp).toDate())}</p>
-      ''';
-      }
-
-      if (contributorData['numberOfLayovers'] > 1) {
-        contributorFlightInfo += '''
-        <h4>Second Layover:</h4>
-        <p>At: ${contributorData['secondLayoverAirport']['name']} (${contributorData['secondLayoverAirport']['iata']})</p>
-        <p>Final Flight Number: ${contributorData['flightNumberThirdLeg']}</p>
-        <p>Date: ${DateFormat('MMM d, yyyy').format((contributorData['flightDateTimeThirdLeg'] as Timestamp).toDate())}</p>
-        <p>Time: ${DateFormat('h:mm a').format((contributorData['flightDateTimeThirdLeg'] as Timestamp).toDate())}</p>
-      ''';
-      }
+      final contributorFlightInfo = _generateFlightTable(contributorData);
 
       final emailContent = _buildEmailContent(
         recipientName: contributorName,
@@ -436,12 +409,12 @@ class _ContributorDetailScreenState extends State<ContributorDetailScreen> {
             'A traveler has expressed interest in connecting with you for travel assistance on your upcoming flight.',
         flightDetails: contributorFlightInfo,
         contactDetails: '''
-        <strong>Name:</strong> ${receiverData['userName']}<br>
-        <strong>Email:</strong> ${receiverData['userEmail']}<br>
-        <strong>Phone:</strong> ${receiverData['userPhone']}<br>
-        <strong>Reason for Assistance:</strong> ${reason}<br>
-        <strong>Party Size:</strong> ${receiverData['partySize']}
-      ''',
+      <strong>Name:</strong> ${receiverData['userName']}<br>
+      <strong>Email:</strong> ${receiverData['userEmail']}<br>
+      <strong>Phone:</strong> ${receiverData['userPhone']}<br>
+      <strong>Reason for Assistance:</strong> ${reason}<br>
+      <strong>Party Size:</strong> ${receiverData['partySize']}
+    ''',
         contactTitle: "Traveler's Details:",
         callToAction:
             "Please reach out to the traveler if you are willing to assist them during their journey. Your help can make a big difference in their travel experience.",
@@ -493,6 +466,52 @@ class _ContributorDetailScreenState extends State<ContributorDetailScreen> {
     }
   }
 
+  String _generateFlightTable(Map<String, dynamic> contributorData) {
+    String tableContent = '''
+  <table style="width:100%; border-collapse: collapse; margin-top: 10px; margin-bottom: 10px;">
+    <tr style="background-color: #f1f4f8;">
+      <th style="padding: 10px; border: 1px solid #ddd; text-align: left;">Departure</th>
+      <th style="padding: 10px; border: 1px solid #ddd; text-align: left;">Arrival</th>
+      <th style="padding: 10px; border: 1px solid #ddd; text-align: left;">Flight Number</th>
+      <th style="padding: 10px; border: 1px solid #ddd; text-align: left;">Date-Time</th>
+    </tr>
+  ''';
+
+    tableContent += '''
+  <tr>
+    <td style="padding: 10px; border: 1px solid #ddd;">${contributorData['departureAirport']['name']} (${contributorData['departureAirport']['iata']})</td>
+    <td style="padding: 10px; border: 1px solid #ddd;">${contributorData['numberOfLayovers'] > 0 ? contributorData['firstLayoverAirport']['name'] : contributorData['arrivalAirport']['name']} (${contributorData['numberOfLayovers'] > 0 ? contributorData['firstLayoverAirport']['iata'] : contributorData['arrivalAirport']['iata']})</td>
+    <td style="padding: 10px; border: 1px solid #ddd;">${contributorData['flightNumberFirstLeg']}</td>
+    <td style="padding: 10px; border: 1px solid #ddd;">${DateFormat('MMM d, yyyy h:mm a').format((contributorData['flightDateTimeFirstLeg'] as Timestamp).toDate())}</td>
+  </tr>
+  ''';
+
+    if (contributorData['numberOfLayovers'] > 0) {
+      tableContent += '''
+    <tr>
+      <td style="padding: 10px; border: 1px solid #ddd;">${contributorData['firstLayoverAirport']['name']} (${contributorData['firstLayoverAirport']['iata']})</td>
+      <td style="padding: 10px; border: 1px solid #ddd;">${contributorData['numberOfLayovers'] > 1 ? contributorData['secondLayoverAirport']['name'] : contributorData['arrivalAirport']['name']} (${contributorData['numberOfLayovers'] > 1 ? contributorData['secondLayoverAirport']['iata'] : contributorData['arrivalAirport']['iata']})</td>
+      <td style="padding: 10px; border: 1px solid #ddd;">${contributorData['flightNumberSecondLeg']}</td>
+      <td style="padding: 10px; border: 1px solid #ddd;">${DateFormat('MMM d, yyyy h:mm a').format((contributorData['flightDateTimeSecondLeg'] as Timestamp).toDate())}</td>
+    </tr>
+    ''';
+    }
+
+    if (contributorData['numberOfLayovers'] > 1) {
+      tableContent += '''
+    <tr>
+      <td style="padding: 10px; border: 1px solid #ddd;">${contributorData['secondLayoverAirport']['name']} (${contributorData['secondLayoverAirport']['iata']})</td>
+      <td style="padding: 10px; border: 1px solid #ddd;">${contributorData['arrivalAirport']['name']} (${contributorData['arrivalAirport']['iata']})</td>
+      <td style="padding: 10px; border: 1px solid #ddd;">${contributorData['flightNumberThirdLeg']}</td>
+      <td style="padding: 10px; border: 1px solid #ddd;">${DateFormat('MMM d, yyyy h:mm a').format((contributorData['flightDateTimeThirdLeg'] as Timestamp).toDate())}</td>
+    </tr>
+    ''';
+    }
+
+    tableContent += '</table>';
+    return tableContent;
+  }
+
   String _buildEmailContent({
     required String recipientName,
     required String title,
@@ -523,7 +542,7 @@ class _ContributorDetailScreenState extends State<ContributorDetailScreen> {
         $introText
       </p>
       <div style="background-color:#f1f4f8; padding:15px; border-radius:5px; margin:20px 0;">
-        <h3 style="font-size:20px; color:#0073e6; margin-top:0;">Flight Details:</h3>
+        <h3 style="font-size:20px; color:#0073e6; margin-top:0;">Your Flight Details:</h3>
         $flightDetails
       </div>
       <div style="background-color:#f1f4f8; padding:15px; border-radius:5px; margin:20px 0;">
