@@ -16,6 +16,7 @@ class AuthForm extends StatefulWidget {
   final VoidCallback onForgotPassword;
   final Function() onResendVerificationEmail;
   final GoogleAuthFlow googleAuthFlow;
+  final Function() onAppleSignIn;
 
   const AuthForm({
     super.key,
@@ -26,6 +27,7 @@ class AuthForm extends StatefulWidget {
     required this.onForgotPassword,
     required this.onResendVerificationEmail,
     required this.googleAuthFlow,
+    required this.onAppleSignIn,
   });
 
   @override
@@ -345,6 +347,12 @@ class _AuthFormState extends State<AuthForm> {
                   title: 'Sign in with Google',
                 ),
                 const SizedBox(height: 20),
+                // LoginTile(
+                //   imagePath: 'assets/images/apple_logo.png',
+                //   onTap: widget.onAppleSignIn,
+                //   title: 'Sign in with Apple',
+                // ),
+                // const SizedBox(height: 20),
               ]
             ],
           ),

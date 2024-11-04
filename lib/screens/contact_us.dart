@@ -142,14 +142,8 @@ class ContactUsScreen extends StatelessWidget {
   }
 
   Future<void> _launchEmail() async {
-    final Uri emailLaunchUri = Uri(
-      scheme: 'mailto',
-      path: 'info@pathpal.org',
-      queryParameters: {
-        'subject': 'Contact from PathPal app',
-        'body': '',
-      },
-    );
+    final Uri emailLaunchUri = Uri.parse(
+        'mailto:info@pathpal.org?subject=${Uri.encodeComponent('Contact from PathPal app')}&body=${Uri.encodeComponent('')}');
 
     if (await canLaunchUrl(emailLaunchUri)) {
       await launchUrl(emailLaunchUri);
@@ -159,22 +153,49 @@ class ContactUsScreen extends StatelessWidget {
   }
 
   Future<void> _launchInstagram() async {
-    const String instagramUrl = 'https://www.instagram.com/path_pal';
-    if (await canLaunchUrl(Uri.parse(instagramUrl))) {
-      await launchUrl(Uri.parse(instagramUrl),
-          mode: LaunchMode.externalApplication);
-    } else {
-      throw 'Could not launch Instagram';
+    final Uri instagramAppUrl = Uri.parse('instagram://user?username=path_pal');
+    final Uri instagramWebUrl = Uri.parse('https://www.instagram.com/path_pal');
+
+    try {
+      if (await canLaunchUrl(instagramAppUrl)) {
+        await launchUrl(instagramAppUrl);
+      } else {
+        if (await canLaunchUrl(instagramWebUrl)) {
+          await launchUrl(instagramWebUrl,
+              mode: LaunchMode.externalApplication);
+        } else {
+          throw 'Could not launch Instagram';
+        }
+      }
+    } catch (e) {
+      if (await canLaunchUrl(instagramWebUrl)) {
+        await launchUrl(instagramWebUrl, mode: LaunchMode.externalApplication);
+      } else {
+        throw 'Could not launch Instagram';
+      }
     }
   }
 
   Future<void> _launchFacebook() async {
-    const String facebookUrl = 'https://m.facebook.com/61563851220198/';
-    if (await canLaunchUrl(Uri.parse(facebookUrl))) {
-      await launchUrl(Uri.parse(facebookUrl),
-          mode: LaunchMode.externalApplication);
-    } else {
-      throw 'Could not launch Facebook';
+    final Uri fbAppUrl = Uri.parse('fb://page/61563851220198');
+    final Uri fbWebUrl = Uri.parse('https://www.facebook.com/61563851220198');
+
+    try {
+      if (await canLaunchUrl(fbAppUrl)) {
+        await launchUrl(fbAppUrl);
+      } else {
+        if (await canLaunchUrl(fbWebUrl)) {
+          await launchUrl(fbWebUrl, mode: LaunchMode.externalApplication);
+        } else {
+          throw 'Could not launch Facebook';
+        }
+      }
+    } catch (e) {
+      if (await canLaunchUrl(fbWebUrl)) {
+        await launchUrl(fbWebUrl, mode: LaunchMode.externalApplication);
+      } else {
+        throw 'Could not launch Facebook';
+      }
     }
   }
 }

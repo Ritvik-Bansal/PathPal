@@ -134,14 +134,9 @@ class ContributorFormState {
     final numberOfLayovers = map['numberOfLayovers'] ?? 0;
 
     var state = ContributorFormState()
-      ..flightNumber =
-          numberOfLayovers > 0 ? '' : (map['flightNumberFirstLeg'] ?? '')
-      ..flightNumberFirstLeg =
-          numberOfLayovers > 0 ? (map['flightNumberFirstLeg'] ?? '') : ''
-      ..flightNumberSecondLeg =
-          numberOfLayovers > 1 ? (map['flightNumberSecondLeg'] ?? '') : ''
-      ..flightNumberThirdLeg =
-          numberOfLayovers > 2 ? (map['flightNumberThirdLeg'] ?? '') : ''
+      ..flightNumberFirstLeg = map['flightNumberFirstLeg'] ?? ''
+      ..flightNumberSecondLeg = map['flightNumberSecondLeg'] ?? ''
+      ..flightNumberThirdLeg = map['flightNumberThirdLeg'] ?? ''
       ..partySize = map['partySize'] ?? 1
       ..departureAirport = map['departureAirport'] != null
           ? Airport.fromMap(map['departureAirport'])
@@ -174,8 +169,7 @@ class ContributorFormState {
 
   Map<String, dynamic> toMap() {
     final map = {
-      'flightNumberFirstLeg':
-          numberOfLayovers > 0 ? flightNumberFirstLeg : flightNumber,
+      'flightNumberFirstLeg': flightNumberFirstLeg,
       'partySize': partySize,
       'allowInAppMessages': allowInAppMessages,
       'departureAirport': departureAirport?.toJson(),
@@ -208,16 +202,9 @@ class ContributorFormState {
 
   void updateFromMap(Map<String, dynamic> map) {
     numberOfLayovers = map['numberOfLayovers'] ?? 0;
-    if (numberOfLayovers > 0) {
-      flightNumberSecondLeg = map['flightNumberSecondLeg'] ?? '';
-    } else {
-      flightNumberFirstLeg = map['flightNumberFirstLeg'] ?? '';
-    }
-
-    if (numberOfLayovers > 1) {
-      flightNumberThirdLeg = map['flightNumberThirdLeg'] ?? '';
-    }
-
+    flightNumberFirstLeg = map['flightNumberFirstLeg'] ?? '';
+    flightNumberSecondLeg = map['flightNumberSecondLeg'] ?? '';
+    flightNumberThirdLeg = map['flightNumberThirdLeg'] ?? '';
     partySize = map['partySize'] ?? 1;
     departureAirport = map['departureAirport'] != null
         ? Airport.fromMap(map['departureAirport'])

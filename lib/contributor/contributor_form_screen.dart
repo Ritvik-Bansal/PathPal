@@ -46,11 +46,13 @@ class _ContributorFormScreenState extends State<ContributorFormScreen> {
       if (data != null) {
         setState(() {
           _formState.updateFromMap(data);
-          _flightNumberController.text = _formState.flightNumber;
+          _flightNumberController.text = _formState.flightNumberFirstLeg;
           _flightNumberFirstLegController.text =
               _formState.flightNumberFirstLeg;
           _flightNumberSecondLegController.text =
               _formState.flightNumberSecondLeg;
+          _flightNumberThirdLegController.text =
+              _formState.flightNumberThirdLeg;
         });
       }
     } catch (e) {
@@ -301,9 +303,7 @@ class _ContributorFormScreenState extends State<ContributorFormScreen> {
       children: [
         _buildFlightLegDetails(
           legNumber: 1,
-          flightNumberController: _formState.numberOfLayovers > 0
-              ? _flightNumberFirstLegController
-              : _flightNumberController,
+          flightNumberController: _flightNumberFirstLegController,
           dateTime: _formState.flightDateTimeFirstLeg,
           onDateTimeChanged: (dateTime) =>
               setState(() => _formState.flightDateTimeFirstLeg = dateTime),

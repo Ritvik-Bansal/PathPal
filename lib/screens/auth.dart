@@ -3,6 +3,8 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:pathpal/services/apple_auth_flow.dart';
+import 'package:pathpal/services/auth_service.dart';
 import 'package:pathpal/services/google_auth_flow.dart';
 import 'package:pathpal/widgets/forget_password_bottom_sheet.dart';
 import 'package:pathpal/widgets/auth_form.dart';
@@ -25,6 +27,41 @@ class _AuthScreenState extends State<AuthScreen> {
   var _isAuthenticating = false;
   bool _isMounted = false;
   final GoogleAuthFlow _googleAuthFlow = GoogleAuthFlow();
+  final AppleAuthFlow _appleAuthFlow = AppleAuthFlow();
+
+  bool isPrivateRelayEmail(String? email) {
+    if (email == null) return false;
+    return email.toLowerCase().contains('privaterelay.appleid.com');
+  }
+
+  Future<void> _handleAppleSignIn() async {
+    try {
+      final user = await _appleAuthFlow.startAuthFlow(context);
+      if (user != null && user.email != null) {
+        if (isPrivateRelayEmail(user.email)) {
+          await FirebaseAuth.instance.signOut();
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text(
+                  'Private relay emails are not supported. Please share your real email address. '
+                  'To change this, sign out of your Apple ID in device settings, sign back in, and try again.',
+                ),
+                duration: Duration(seconds: 6),
+              ),
+            );
+          }
+          return;
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Sign in failed: ${e.toString()}')),
+        );
+      }
+    }
+  }
 
   void _resendVerificationEmail() async {
     ScaffoldMessenger.of(context).clearSnackBars();
@@ -63,8 +100,10 @@ class _AuthScreenState extends State<AuthScreen> {
 
     try {
       if (_isLogin) {
-        UserCredential userCredential = await _firebase
-            .signInWithEmailAndPassword(email: email, password: password);
+        await _firebase.signOut();
+
+        final userCredential = await _firebase.signInWithEmailAndPassword(
+            email: email, password: password);
 
         if (!userCredential.user!.emailVerified) {
           await _firebase.signOut();
@@ -72,6 +111,10 @@ class _AuthScreenState extends State<AuthScreen> {
             code: 'email-not-verified',
             message: 'Please verify your email before logging in.',
           );
+        }
+        await userCredential.user!.reload();
+        if (mounted) {
+          await AuthService().handleSuccessfulAuth(context);
         }
       } else {
         final userCredentials = await _firebase.createUserWithEmailAndPassword(
@@ -92,6 +135,10 @@ class _AuthScreenState extends State<AuthScreen> {
           'profile_picture': imageUrl,
           'email_verified': false,
         }, SetOptions(merge: true));
+
+        if (mounted) {
+          await AuthService().handleSuccessfulAuth(context);
+        }
 
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -226,7 +273,11 @@ class _AuthScreenState extends State<AuthScreen> {
               isLogin: _isLogin,
               googleAuthFlow: _googleAuthFlow,
               onResendVerificationEmail: _resendVerificationEmail,
-              onSubmit: _submit,
+              onSubmit: (String email, String password,
+                  {String? name, String? age}) {
+                _submit(age: age, name: name, email, password);
+                setState(() {});
+              },
               isAuthenticating: _isAuthenticating,
               onToggleAuthMode: () {
                 _safeSetState(() {
@@ -244,6 +295,7 @@ class _AuthScreenState extends State<AuthScreen> {
                   },
                 );
               },
+              onAppleSignIn: _handleAppleSignIn,
             ),
           ],
         ),

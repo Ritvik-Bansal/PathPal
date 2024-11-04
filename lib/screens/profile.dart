@@ -10,6 +10,7 @@ import 'package:pathpal/screens/contact_us.dart';
 import 'package:pathpal/screens/personal_info.dart';
 import 'package:pathpal/screens/privacy_policy_screen.dart';
 import 'package:pathpal/screens/terms_conditions_screen.dart';
+import 'package:pathpal/services/auth_service.dart';
 import 'package:pathpal/widgets/build_setting_item.dart';
 import 'package:pathpal/widgets/forgot_password_button.dart';
 
@@ -158,7 +159,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     _subscriptions.clear();
 
     try {
-      await FirebaseAuth.instance.signOut();
+      await AuthService().signOut(context);
     } catch (e) {
       print("Error during logout: $e");
     } finally {

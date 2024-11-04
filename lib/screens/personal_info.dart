@@ -6,6 +6,8 @@ import 'package:country_picker/country_picker.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 
+import 'package:pathpal/screens/auth.dart';
+
 class PersonalInfoScreen extends StatefulWidget {
   const PersonalInfoScreen({super.key});
 
@@ -16,6 +18,7 @@ class PersonalInfoScreen extends StatefulWidget {
 class _PersonalInfoScreenState extends State<PersonalInfoScreen> {
   var _enteredName = "";
   var _isAuthenticating = false;
+  var _isDeletingAccount = false;
   final _form = GlobalKey<FormState>();
   final user = FirebaseAuth.instance.currentUser;
   final _firebase = FirebaseAuth.instance;
@@ -26,6 +29,10 @@ class _PersonalInfoScreenState extends State<PersonalInfoScreen> {
   Future<void> _deleteAccount() async {
     final user = _firebase.currentUser;
     if (user == null) return;
+
+    setState(() {
+      _isDeletingAccount = true;
+    });
 
     try {
       if (user.providerData
@@ -48,13 +55,25 @@ class _PersonalInfoScreenState extends State<PersonalInfoScreen> {
       }
 
       if (mounted) {
+        setState(() {
+          _isDeletingAccount = false;
+        });
+
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Account deleted successfully')),
         );
+
+        Navigator.of(context).pushAndRemoveUntil(
+          MaterialPageRoute(builder: (context) => const AuthScreen()),
+          (route) => false,
+        );
       }
-      Navigator.of(context).pop();
     } catch (e) {
       if (mounted) {
+        setState(() {
+          _isDeletingAccount = false;
+        });
+
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Failed to delete account: ${e.toString()}')),
         );
@@ -326,6 +345,28 @@ class _PersonalInfoScreenState extends State<PersonalInfoScreen> {
 
   @override
   Widget build(BuildContext context) {
+    if (_isDeletingAccount) {
+      return PopScope(
+        canPop: false,
+        child: Scaffold(
+          backgroundColor: Theme.of(context).colorScheme.surface,
+          body: Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const CircularProgressIndicator(),
+                const SizedBox(height: 16),
+                Text(
+                  'Deleting account...',
+                  style: Theme.of(context).textTheme.bodyLarge,
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+
     return Scaffold(
       backgroundColor: Theme.of(context).colorScheme.surface,
       appBar: AppBar(
@@ -508,26 +549,41 @@ class _PersonalInfoScreenState extends State<PersonalInfoScreen> {
   void _showDeleteAccountConfirmation() {
     showDialog(
       context: context,
+      barrierDismissible: !_isDeletingAccount,
       builder: (BuildContext context) {
-        return AlertDialog(
-          title: Text('Delete Account'),
-          content: Text(
-              'Are you sure you want to delete your account? This action cannot be undone.'),
-          actions: <Widget>[
-            TextButton(
-              child: Text('Cancel'),
-              onPressed: () {
-                Navigator.of(context).pop();
-              },
-            ),
-            TextButton(
-              child: Text('Delete'),
-              onPressed: () {
-                Navigator.of(context).pop();
-                _deleteAccount();
-              },
-            ),
-          ],
+        return PopScope(
+          canPop: !_isDeletingAccount,
+          child: AlertDialog(
+            title: const Text('Delete Account'),
+            content: _isDeletingAccount
+                ? const Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      CircularProgressIndicator(),
+                      SizedBox(height: 16),
+                      Text('Deleting account...')
+                    ],
+                  )
+                : const Text(
+                    'Are you sure you want to delete your account? This action cannot be undone.'),
+            actions: _isDeletingAccount
+                ? null
+                : <Widget>[
+                    TextButton(
+                      child: const Text('Cancel'),
+                      onPressed: () {
+                        Navigator.of(context).pop();
+                      },
+                    ),
+                    TextButton(
+                      child: const Text('Delete'),
+                      onPressed: () {
+                        Navigator.of(context).pop();
+                        _deleteAccount();
+                      },
+                    ),
+                  ],
+          ),
         );
       },
     );
