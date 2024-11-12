@@ -7,6 +7,7 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 
 import 'package:pathpal/screens/auth.dart';
+import 'package:sign_in_with_apple/sign_in_with_apple.dart';
 
 class PersonalInfoScreen extends StatefulWidget {
   const PersonalInfoScreen({super.key});
@@ -35,21 +36,30 @@ class _PersonalInfoScreenState extends State<PersonalInfoScreen> {
     });
 
     try {
-      if (user.providerData
-          .any((userInfo) => userInfo.providerId == 'google.com')) {
-        await _reauthenticateWithGoogle();
-      } else {
-        await _reauthenticateWithPassword();
+      final providerData = user.providerData;
+      final providerId =
+          providerData.isNotEmpty ? providerData[0].providerId : null;
+
+      switch (providerId) {
+        case 'google.com':
+          await _reauthenticateWithGoogle();
+          break;
+        case 'apple.com':
+          await _reauthenticateWithApple();
+          break;
+        case 'password':
+          await _reauthenticateWithPassword();
+          break;
+        default:
+          throw Exception('Unsupported authentication provider');
       }
 
       await _deleteUserDocuments(user.uid);
-
       await _firestore.collection('users').doc(user.uid).delete();
-
       await user.delete();
-
       await _firebase.signOut();
 
+      // Sign out of Google if necessary
       if (await _googleSignIn.isSignedIn()) {
         await _googleSignIn.signOut();
       }
@@ -78,6 +88,27 @@ class _PersonalInfoScreenState extends State<PersonalInfoScreen> {
           SnackBar(content: Text('Failed to delete account: ${e.toString()}')),
         );
       }
+    }
+  }
+
+  Future<void> _reauthenticateWithApple() async {
+    try {
+      final appleCredential = await SignInWithApple.getAppleIDCredential(
+        scopes: [
+          AppleIDAuthorizationScopes.email,
+          AppleIDAuthorizationScopes.fullName,
+        ],
+      );
+
+      final oauthCredential = OAuthProvider('apple.com').credential(
+        idToken: appleCredential.identityToken,
+        accessToken: appleCredential.authorizationCode,
+      );
+
+      await _firebase.currentUser
+          ?.reauthenticateWithCredential(oauthCredential);
+    } catch (e) {
+      throw Exception('Apple reauthentication failed: ${e.toString()}');
     }
   }
 
