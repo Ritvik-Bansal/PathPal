@@ -59,7 +59,6 @@ class _PersonalInfoScreenState extends State<PersonalInfoScreen> {
       await user.delete();
       await _firebase.signOut();
 
-      // Sign out of Google if necessary
       if (await _googleSignIn.isSignedIn()) {
         await _googleSignIn.signOut();
       }
@@ -85,8 +84,10 @@ class _PersonalInfoScreenState extends State<PersonalInfoScreen> {
         });
 
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to delete account: ${e.toString()}')),
+          SnackBar(
+              content: Text('Failed to delete account: Incorrect Password')),
         );
+        print(e.toString());
       }
     }
   }

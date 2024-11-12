@@ -98,9 +98,10 @@ class _AuthFormState extends State<AuthForm> {
     return Card(
       elevation: 0,
       color: Theme.of(context).colorScheme.surface,
-      margin: const EdgeInsets.only(bottom: 0, right: 10, left: 10, top: 10),
+      margin: const EdgeInsets.only(bottom: 0, right: 10, left: 10, top: 0),
       child: Padding(
-        padding: const EdgeInsets.all(20),
+        padding:
+            const EdgeInsets.only(bottom: 20, left: 20, right: 20, top: 10),
         child: Form(
           key: _form,
           child: Column(
@@ -341,16 +342,21 @@ class _AuthFormState extends State<AuthForm> {
                   ],
                 ),
                 const SizedBox(height: 20),
-                LoginTile(
-                  imagePath: 'assets/images/google_logo.png',
-                  onTap: _handleGoogleSignIn,
-                  title: 'Sign in with Google',
-                ),
-                const SizedBox(height: 20),
-                LoginTile(
-                  imagePath: 'assets/images/apple_logo.png',
-                  onTap: widget.onAppleSignIn,
-                  title: 'Sign in with Apple',
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    LoginTile(
+                      imagePath: 'assets/images/google_logo.png',
+                      onTap: _handleGoogleSignIn,
+                      title: 'Google',
+                    ),
+                    const SizedBox(width: 20),
+                    LoginTile(
+                      imagePath: 'assets/images/apple_logo.png',
+                      onTap: widget.onAppleSignIn,
+                      title: 'Apple',
+                    ),
+                  ],
                 ),
                 const SizedBox(height: 20),
               ]
