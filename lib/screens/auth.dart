@@ -11,6 +11,7 @@ import 'package:firebase_storage/firebase_storage.dart';
 import 'dart:io';
 import 'package:flutter/services.dart' show rootBundle;
 import 'package:path_provider/path_provider.dart';
+import 'package:pathpal/widgets/loading_overlay.dart';
 import 'package:sign_in_with_apple/sign_in_with_apple.dart';
 import 'package:crypto/crypto.dart';
 import 'dart:convert';
@@ -37,6 +38,7 @@ class _AuthScreenState extends State<AuthScreen> {
   }
 
   Future<void> _handleAppleSignIn() async {
+    LoadingOverlay.show(context);
     try {
       const charset =
           '0123456789ABCDEFGHIJKLMNOPQRSTUVXYZabcdefghijklmnopqrstuvwxyz-._';
@@ -82,12 +84,15 @@ class _AuthScreenState extends State<AuthScreen> {
           }
 
           final email = appleCredential.email ?? user.email;
+          final isPrivateEmail = isPrivateRelayEmail(email);
 
           if (displayName == null || displayName.isEmpty) {
+            LoadingOverlay.hide();
             if (mounted) {
               displayName = await _showNameInputDialog(context) ??
                   'User ${user.uid.substring(0, 5)}';
             }
+            if (mounted) LoadingOverlay.show(context);
           }
 
           String imageUrl = await _uploadDefaultProfilePicture(user.uid);
@@ -98,9 +103,9 @@ class _AuthScreenState extends State<AuthScreen> {
               .set({
             'email': email,
             'name': displayName,
-            'is_private_email': isPrivateRelayEmail(email),
+            'is_private_email': isPrivateEmail,
             'apple_user_identifier': appleCredential.userIdentifier,
-            'email_verified': user.emailVerified,
+            'email_verified': true,
             'auth_provider': 'apple.com',
             'last_login': FieldValue.serverTimestamp(),
             'first_login_at': FieldValue.serverTimestamp(),
@@ -111,17 +116,9 @@ class _AuthScreenState extends State<AuthScreen> {
           await user.updateDisplayName(displayName);
           await user.updatePhotoURL(imageUrl);
 
-          if (email != null && email != user.email) {
+          if (email != null && email != user.email && !isPrivateEmail) {
             try {
-              await user.verifyBeforeUpdateEmail(email);
-              if (mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text(
-                        'Please verify your new email address. A verification link has been sent.'),
-                  ),
-                );
-              }
+              await user.updateEmail(email);
             } catch (e) {
               print('Error updating email: $e');
             }
@@ -132,6 +129,7 @@ class _AuthScreenState extends State<AuthScreen> {
               .doc(user.uid)
               .update({
             'last_login': FieldValue.serverTimestamp(),
+            'email_verified': true,
           });
 
           if (userDoc.data()?['name'] != null && user.displayName == null) {
@@ -140,19 +138,12 @@ class _AuthScreenState extends State<AuthScreen> {
         }
 
         if (mounted) {
+          LoadingOverlay.hide();
           await AuthService().handleSuccessfulAuth(context);
         }
       }
     } catch (error) {
-      print('Sign in error: $error');
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Sign in failed: $error'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
+      LoadingOverlay.hide();
     }
   }
 
