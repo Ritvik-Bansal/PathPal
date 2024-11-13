@@ -7,12 +7,16 @@ class Forgetpasswordbtn extends StatelessWidget {
     required this.descText,
     required this.titleText,
     required this.onTap,
+    this.iconSize = 60,
+    this.fontSize = 16,
   });
 
   final IconData icon;
   final String titleText;
   final String descText;
   final void Function() onTap;
+  final double iconSize;
+  final double fontSize;
 
   @override
   Widget build(BuildContext context) {
@@ -25,33 +29,35 @@ class Forgetpasswordbtn extends StatelessWidget {
           color: const Color.fromARGB(104, 180, 221, 255),
         ),
         child: Row(
-          mainAxisAlignment: MainAxisAlignment.start,
           children: [
             Icon(
               icon,
-              size: 60,
+              size: iconSize,
             ),
-            const SizedBox(
-              width: 20,
+            const SizedBox(width: 20),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    titleText,
+                    style: const TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  Text(
+                    descText,
+                    style: TextStyle(
+                      fontSize: fontSize,
+                    ),
+                    overflow: TextOverflow.ellipsis,
+                    maxLines: 2,
+                  ),
+                ],
+              ),
             ),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  titleText,
-                  style: const TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                Text(
-                  descText,
-                  style: const TextStyle(
-                    fontSize: 16,
-                  ),
-                ),
-              ],
-            )
           ],
         ),
       ),
