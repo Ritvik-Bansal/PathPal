@@ -54,8 +54,12 @@ class ContactUsScreen extends StatelessWidget {
                 style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 20),
-              _buildSocialMediaOption('Instagram', '@path_pal • Account Tag',
-                  'assets/images/instagram.png', _launchInstagram, context),
+              _buildSocialMediaOption(
+                  'Instagram',
+                  '@PathPalOfficial • Account Tag',
+                  'assets/images/instagram.png',
+                  _launchInstagram,
+                  context),
               _buildSocialMediaOption('Facebook', '@PathPal • Facebook Page',
                   'assets/images/facebook.png', _launchFacebook, context),
             ],
@@ -153,8 +157,10 @@ class ContactUsScreen extends StatelessWidget {
   }
 
   Future<void> _launchInstagram() async {
-    final Uri instagramAppUrl = Uri.parse('instagram://user?username=path_pal');
-    final Uri instagramWebUrl = Uri.parse('https://www.instagram.com/path_pal');
+    final Uri instagramAppUrl =
+        Uri.parse('instagram://user?username=pathpalofficial');
+    final Uri instagramWebUrl =
+        Uri.parse('https://www.instagram.com/pathpalofficial');
 
     try {
       if (await canLaunchUrl(instagramAppUrl)) {

@@ -3,7 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 // import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:pathpal/receiver/receiver_form_state.dart';
 import 'package:pathpal/contributor/contributor_form_state.dart';
-import 'package:pathpal/services/fcm_service.dart';
+import 'package:pathpal/services/email_service.dart';
 
 class FirestoreService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
@@ -603,10 +603,14 @@ class FirestoreService {
     return null;
   }
 
-  Future<void> addNotification(String userId, String title, String body,
-      {String? contributorId,
-      String? receiverDocId,
-      String? contributorDocId}) async {
+  Future<void> addNotification(
+    String userId,
+    String title,
+    String body, {
+    String? contributorId,
+    String? receiverDocId,
+    String? contributorDocId,
+  }) async {
     try {
       String? imageUrl;
       if (title == 'Potential Volunteer Found') {
