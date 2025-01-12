@@ -3,50 +3,14 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:pathpal/contributor/contributor_form_state.dart';
-import 'package:pathpal/services/fcm_service.dart';
 import 'package:pathpal/services/firestore_service.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
 class EmailService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final FirestoreService _firestoreService;
-  final FCMService _fcmService = FCMService();
 
-  EmailService(this._firestoreService) {
-    _fcmService.initialize();
-  }
-
-  Future<void> sendPushNotification(
-      String userId, String title, String body) async {
-    final fcmToken = await _fcmService.getFCMToken(userId);
-
-    if (fcmToken != null) {
-      try {
-        await http.post(
-          Uri.parse('https://fcm.googleapis.com/fcm/send'),
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': 'key=${dotenv.env["FCM_SERVER_KEY"]}',
-          },
-          body: json.encode({
-            'notification': {
-              'title': title,
-              'body': body,
-              'sound': 'default',
-            },
-            'priority': 'high',
-            'data': {
-              'click_action': 'FLUTTER_NOTIFICATION_CLICK',
-              'status': 'done',
-            },
-            'to': fcmToken,
-          }),
-        );
-      } catch (e) {
-        print('Error sending push notification: $e');
-      }
-    }
-  }
+  EmailService(this._firestoreService);
 
   Future<void> sendEmailToTentativeReceiver(
     String userEmail,
@@ -178,12 +142,6 @@ class EmailService {
         'A Volunteer has submitted a flight that matches your seeker request.',
         contributorDocId: contributorDocId,
         contributorId: contributorId,
-      );
-
-      await sendPushNotification(
-        userId,
-        'Potential Volunteer Found',
-        'A Volunteer has submitted a flight that matches your seeker request.',
       );
 
       print('Email notification data saved to Firestore');

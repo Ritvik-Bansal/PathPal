@@ -183,8 +183,8 @@ class ContactUsScreen extends StatelessWidget {
   }
 
   Future<void> _launchFacebook() async {
-    final Uri fbAppUrl = Uri.parse('fb://page/61563851220198');
-    final Uri fbWebUrl = Uri.parse('https://www.facebook.com/61563851220198');
+    final Uri fbAppUrl = Uri.parse('fb://page/PathPalOfficial');
+    final Uri fbWebUrl = Uri.parse('https://www.facebook.com/PathPalOfficial/');
 
     try {
       if (await canLaunchUrl(fbAppUrl)) {

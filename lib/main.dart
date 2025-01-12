@@ -4,6 +4,7 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:pathpal/data/airport_database.dart';
 import 'package:pathpal/screens/auth.dart';
 import 'package:pathpal/services/auth_service.dart';
+import 'package:pathpal/services/notification_service.dart';
 import 'firebase_options.dart';
 
 void main() async {
@@ -22,6 +23,9 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      NotificationService.initialize(context);
+    });
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       title: 'PathPal',

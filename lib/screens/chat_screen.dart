@@ -3,6 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:intl/intl.dart';
 import 'package:pathpal/services/block_service.dart';
+import 'package:pathpal/services/notification_service.dart';
 import 'package:pathpal/widgets/forgot_password_button.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
@@ -282,6 +283,13 @@ class _ChatScreenState extends State<ChatScreen> {
         0,
         duration: const Duration(milliseconds: 300),
         curve: Curves.easeOut,
+      );
+
+      await NotificationService.sendChatNotification(
+        recipientId: widget.otherUserId,
+        senderId: user.uid,
+        message: message,
+        chatId: widget.chatId,
       );
     } catch (e) {
       print('Error sending message: $e');
